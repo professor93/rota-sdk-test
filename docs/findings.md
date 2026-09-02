@@ -60,6 +60,22 @@ Also in v1.0.2: `rota set -h` prints usage without an account id; the kimi
 contract test allows the permission mode it asks for; CI on three
 platforms with a release workflow gated on this suite.
 
+## Found by the first Windows run, fixed in v1.0.4
+
+9. **Upload paths with forward slashes were refused on Windows.**
+   `wire.StageUploads` compared the caller's `notes/a.txt` with
+   `filepath.Clean`'s `notes\a.txt` and refused it. Paths are now judged in
+   the platform's own form, and a rooted path with no drive (`\abs`), which
+   Windows does not call absolute, is refused too.
+10. **Process discovery shelled out to `ps`.** On Windows nothing was
+    listed. The process table is now read through PowerShell, with the
+    working directory reported as unknown rather than guessed.
+
+The rest of that run was the test harness: every fake vendor CLI was a
+shell script. They are now the test binary itself, playing a small spec
+(`internal/fakecli`), so the same suite runs on every platform and CI
+tests Windows in full.
+
 ## Inventory corrections (SDK is right)
 
 - `Complete` on codex takes `ExpiresAt` from `expires_in` when the reply
