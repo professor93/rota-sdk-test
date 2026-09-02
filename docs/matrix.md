@@ -191,6 +191,22 @@
 | StoreRun | 7 | TestStoreRun_AdoptsBeforeRefresh, TestStoreRun_BusyIsErrBusy, TestStoreRun_ChildEnvIsHostEnvWithoutHiddenNames, TestStoreRun_DeadIsReauth, TestStoreRun_ReleasesLockSoSaveRefuses, TestStoreRun_SavesBeforeRun, TestStoreRun_StageErrorStillSaves |
 | StoreSave | 1 | TestStoreSave_AfterReleaseRefuses |
 
+## rotatest/serve
+
+| Symbol | Conditions | Tests |
+|---|---:|---|
+| AccountSchema | 2 | TestAccountSchema_DescribesOneAccount, TestAccountSchema_UnknownIdIs404 |
+| Accounts | 3 | TestAccounts_DefaultSkipsAnAccountOutOfTheQueue, TestAccounts_ListedInRotationOrderWithDefault, TestAccounts_ThresholdReadsTheCutoff |
+| Auth | 1 | TestAuth_OldPathsStillWork |
+| DeleteAccount | 2 | TestDeleteAccount_BadIdIs400, TestDeleteAccount_RemovesAndThen404 |
+| Login | 2 | TestLogin_GrokReturnsIdUrlKind, TestLogin_UnknownProviderIs400 |
+| LoginFinish | 3 | TestLoginFinish_ApiKeyAddsAccount, TestLoginFinish_BadIdIs404, TestLoginFinish_WrongKeyKeepsThePendingLogin |
+| PatchAccount | 15 | TestPatchAccount_BadOrderIs400, TestPatchAccount_CwdEqualToConfigDirIs400, TestPatchAccount_NothingToChangeIs400, TestPatchAccount_OrderBeforeIdPlacesRelative, TestPatchAccount_OrderFirstShiftsQueue, TestPatchAccount_OrderNumberAsStringIsTheSame, TestPatchAccount_OrderNumberTakesThatPlace, TestPatchAccount_OrderPastTheEndIsLast, TestPatchAccount_OrderUpMovesOnePlace, TestPatchAccount_OrderZeroLeavesTheQueue, TestPatchAccount_ProjectDirsAreStored, TestPatchAccount_RelativeProjectPathIs400, TestPatchAccount_ThresholdIsStored, TestPatchAccount_ThresholdOutOfRangeIs400, TestPatchAccount_UnknownIdIs404 |
+| Root | 1 | TestRoot_UnauthenticatedSaysVersion |
+| Run | 16 | TestRun_ByIdReturnsTheResultFields, TestRun_ClaudeReadsTheResultEvent, TestRun_CwdInsideRootRuns, TestRun_CwdOutsideRootIs400, TestRun_DangerousOptionIs403WithoutFlag, TestRun_DangerousOptionRunsWithFlag, TestRun_DeadAccountIs409, TestRun_MaxConcurrentSerializesRuns, TestRun_MissingPromptIs400, TestRun_NonZeroExitIs502, TestRun_RotationPicksTheDefault, TestRun_StreamAcceptsNDJSON, TestRun_StreamIsServerSentEvents, TestRun_TimeoutIs504, TestRun_UnknownAccountIs404, TestRun_UnknownFieldIs400 |
+| Schema | 1 | TestSchema_DescribesEveryProvider |
+| V1 | 3 | TestV1_NeedsBearer, TestV1_TenBadTokensBlockTheAddress, TestV1_WrongTokenIs401 |
+
 ## rotatest/live
 
 | Symbol | Conditions | Tests |

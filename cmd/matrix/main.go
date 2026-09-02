@@ -15,7 +15,7 @@ import (
 )
 
 // patterns are the test packages, in the order the matrix lists them.
-var patterns = []string{"./sdk/...", "./rotation/", "./store/", "./live/"}
+var patterns = []string{"./sdk/...", "./rotation/", "./store/", "./serve/", "./live/"}
 
 func main() {
 	root, err := goOutput("", "list", "-m", "-f", "{{.Dir}}")
