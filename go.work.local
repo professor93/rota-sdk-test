@@ -1,0 +1,11 @@
+// Opt-in override: test the local rota checkout instead of the published
+// module. Off by default so a plain `go test ./...` proves v1.0.0 as the
+// proxy serves it.
+//
+//   GOWORK=$PWD/go.work.local go test ./...
+go 1.27
+
+use (
+	.
+	../cswapgo
+)
