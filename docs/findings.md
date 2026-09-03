@@ -76,6 +76,58 @@ shell script. They are now the test binary itself, playing a small spec
 (`internal/fakecli`), so the same suite runs on every platform and CI
 tests Windows in full.
 
+## Security review of the HTTP server, fixed in v1.0.6
+
+Two read-only reviews of `rota serve`, one on auth and transport, one on
+the path from an authenticated request to the child CLI. Twenty-three
+findings, five high, all fixed with tests except three that are documented.
+
+High:
+
+11. The brute-force block was checked before the token and keyed on the
+    peer address, so ten bad tokens from anyone sharing that address (a
+    proxy, or a web page on the loopback) locked the operator out for an
+    hour. The right token is now always admitted; only guesses are blocked.
+12. A run waiting for a concurrency slot held the store's exclusive lock,
+    so one extra concurrent run stalled every other request and every
+    local `rota` command until a slot freed. The slot is taken before the
+    store, with a cancellable wait; the forced-refresh listing likewise.
+13. `PATCH` accepted any absolute `config_dir` and `DELETE` removed it, so a
+    caller could delete the operator's home, the store, or another
+    account's credentials. A config directory may no longer be rota's own
+    (another home, the store, an ancestor of it), must sit inside a root
+    when roots are set, and removal only deletes homes rota created.
+14. Relative `add_dirs`, `plugin_dirs`, `images`, `settings`, `mcp_config`
+    and grok's debug file were checked against the server's cwd but handed
+    to the CLI raw, which resolved them against the run's cwd: `../..`
+    from a deep cwd escaped the roots. Every checked path now reaches the
+    CLI in its resolved absolute form.
+15. Documented, not gated: roots confine what a request names, not what
+    an agent with a shell reads. Run the server as a user that can read
+    only the roots and the store.
+
+Medium: the limiter dropped its whole table when flooded (now evicts the
+addresses with the fewest failures); six error paths returned raw internal
+errors (now "internal error", text in the log); JSON uploads had no caps
+(now the same 32 files and 16 MB each as multipart, enforced in
+`StageUploads`); a settings or MCP file could be rewritten between the vet
+and the CLI reading it (the vetted document is now passed inline); the
+settings deny list missed keys that load plugins and project MCP servers;
+`--token` on the command line is visible in the process table (warned at
+startup, `ROTA_TOKEN` recommended); config files were read whole before the
+size check and blocked on a FIFO (stat first, regular files only); no
+`WaitDelay`, so a helper holding the pipes pinned a handler and its slot
+forever (5 seconds now).
+
+Low: token length leaked through comparison timing (hashed first); the
+playground could be framed (`frame-ancestors 'none'`, `X-Frame-Options`);
+history kept upload bytes in localStorage (names only now); broken login
+bodies were read as empty (refused); a multipart run read its request from
+the query string (part only); JSON replies lacked `Cache-Control: no-store`;
+hermetic mode was defeated by a duplicate `CLAUDE_CONFIG_DIR` (dropped);
+`worktree` accepted paths (names only); resume transcripts were copied
+before validation (after it now).
+
 ## Inventory corrections (SDK is right)
 
 - `Complete` on codex takes `ExpiresAt` from `expires_in` when the reply
