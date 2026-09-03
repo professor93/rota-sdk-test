@@ -83,8 +83,14 @@ func TestV1_TenBadTokensBlockTheAddress(t *testing.T) {
 	if code := bad(); code != 429 {
 		t.Fatalf("eleventh bad token: %d, want 429", code)
 	}
-	if resp, raw := s.do("GET", "/v1/accounts", ""); resp.StatusCode != 429 {
+	// Since 1.0.6 the block is for guesses only: the right token is admitted
+	// from a blocked address, so a proxy or a web page on the loopback cannot
+	// lock the operator out; wrong tokens from it stay refused.
+	if resp, raw := s.do("GET", "/v1/accounts", ""); resp.StatusCode != 200 {
 		t.Fatalf("a blocked address with the right token: %d %s", resp.StatusCode, raw)
+	}
+	if code := bad(); code != 429 {
+		t.Fatalf("wrong tokens stay blocked: %d", code)
 	}
 	if resp, _ := s.do("GET", "/", "", "Authorization", ""); resp.StatusCode != 200 {
 		t.Fatalf("the root is outside the limiter: %d", resp.StatusCode)
