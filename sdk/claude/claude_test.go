@@ -423,6 +423,27 @@ func TestClaudeLaunch_EnvAndDrops(t *testing.T) {
 	}
 }
 
+// The staged command names the account it runs as: the CLI's own config file
+// is shared between accounts and reports the keychain login, so these three
+// are the only truthful source for a status line or a hook.
+func TestClaudeLaunch_IdentityVariables(t *testing.T) {
+	setup(t)
+	if strings.HasPrefix(rota.Version, "1.0.") {
+		t.Skipf("identity variables arrived after %s", rota.Version)
+	}
+	a := account()
+	a.Email = "who@example.com"
+	cmd, err := rota.Stage(a, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"ROTA_PROVIDER=claude", "ROTA_ACCOUNT_ID=1", "ROTA_ACCOUNT=who@example.com"} {
+		if !slices.Contains(cmd.Env, want) {
+			t.Errorf("env lacks %s: %v", want, cmd.Env)
+		}
+	}
+}
+
 func TestClaudeLaunch_ConfigDirComesFromAccountNotHome(t *testing.T) {
 	setup(t)
 	a := account()

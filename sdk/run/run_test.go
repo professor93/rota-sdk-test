@@ -194,13 +194,18 @@ func TestRun_NonZeroExitIsAResultNotAnError(t *testing.T) {
 		t.Fatalf("%+v", res)
 	}
 
-	// Nothing on stdout: stderr is the only explanation there is.
+	// Nothing on stdout: stderr is the only explanation there is, and it
+	// stays in Stderr. Before 1.1.0 rota copied it into Result as well.
 	a = register(fake.Claude(cli(t, "cat >/dev/null\necho fake-stderr >&2\nexit 2\n")))
 	res, err = run(a, rota.Spec{Prompt: "hi"}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !res.IsError || res.ExitCode != 2 || res.Result != "fake-stderr" {
+	want := ""
+	if strings.HasPrefix(rota.Version, "1.0.") {
+		want = "fake-stderr"
+	}
+	if !res.IsError || res.ExitCode != 2 || res.Result != want || !strings.Contains(res.Stderr, "fake-stderr") {
 		t.Fatalf("%+v", res)
 	}
 }

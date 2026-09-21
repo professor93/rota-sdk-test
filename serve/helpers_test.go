@@ -59,6 +59,10 @@ type opts struct {
 	allowDangerous bool
 	maxConcurrent  int
 	timeout        time.Duration
+	// env is added to the server's environment, which is otherwise only
+	// what start gives it. For the few tests about what the server reads
+	// from the world around it rather than from its store.
+	env []string
 }
 
 // server is one running rota serve with its own store and fake CLIs.
@@ -183,6 +187,7 @@ func start(t *testing.T, o opts) *server {
 	if tmp := os.Getenv("TMPDIR"); tmp != "" {
 		cmd.Env = append(cmd.Env, "TMPDIR="+tmp)
 	}
+	cmd.Env = append(cmd.Env, o.env...)
 	cmd.Stderr = s.stderr
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
@@ -289,6 +294,7 @@ type accountView struct {
 	Metered   bool    `json:"metered"`
 	Cwd       string  `json:"cwd"`
 	ConfigDir string  `json:"config_dir"`
+	Sessions  string  `json:"sessions"`
 	Windows   []struct {
 		Name    string  `json:"name"`
 		Percent float64 `json:"percent"`
