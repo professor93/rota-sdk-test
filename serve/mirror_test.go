@@ -19,7 +19,6 @@ import (
 // minus the daemon's own files. The account keeps the whole world and gets a
 // daemon of its own.
 func TestRun_ClaudeRunsInAMirrorOfTheServersConfigDirectory(t *testing.T) {
-	since(t, "1.1.0")
 	src := t.TempDir()
 	for name, body := range map[string]string{
 		"settings.json": `{"theme":"dark"}`,
@@ -61,7 +60,6 @@ printf '{"type":"result","subtype":"success","is_error":false,"session_id":"s-fa
 // directory puts them there, and `shared` — the default — stores nothing.
 // A run afterwards links the account's mirror into whatever was said.
 func TestPatchAccount_SessionsSaysWhereConversationsLive(t *testing.T) {
-	since(t, "1.1.0")
 	s := start(t, opts{
 		claude: `cat >/dev/null
 printf '{"type":"result","subtype":"success","is_error":false,"session_id":"s-fake","result":"ok","num_turns":1,"total_cost_usd":0.01}\n'

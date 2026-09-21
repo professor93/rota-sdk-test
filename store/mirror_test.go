@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	rota "github.com/professor93/rota/lib"
@@ -21,9 +20,6 @@ import (
 // person's directory mirrored entry by entry with symlinks, minus the
 // daemon's own files.
 func TestStoreRun_ClaudeRunsInAMirrorOfTheSharedConfigDirectory(t *testing.T) {
-	if strings.HasPrefix(rota.Version, "1.0.") {
-		t.Skipf("rota %s runs claude in the person's own directory", rota.Version)
-	}
 	src := claudeWorld(t)
 	fake.CLI(t, "claude", `cat >/dev/null
 printf '{"type":"result","subtype":"success","is_error":false,"session_id":"s-fake","result":"CFG=%s","num_turns":1}\n' "$CLAUDE_CONFIG_DIR"
@@ -56,9 +52,6 @@ printf '{"type":"result","subtype":"success","is_error":false,"session_id":"s-fa
 // An account given a directory of its own asked for a separate world, and
 // still gets one: nothing is mirrored into it, and the CLI is pointed there.
 func TestStoreRun_ClaudeWithItsOwnConfigDirIsNotMirrored(t *testing.T) {
-	if strings.HasPrefix(rota.Version, "1.0.") {
-		t.Skipf("rota %s has no mirror to skip", rota.Version)
-	}
 	claudeWorld(t)
 	fake.CLI(t, "claude", `cat >/dev/null
 printf '{"type":"result","subtype":"success","is_error":false,"session_id":"s-fake","result":"CFG=%s","num_turns":1}\n' "$CLAUDE_CONFIG_DIR"
@@ -92,9 +85,6 @@ printf '{"type":"result","subtype":"success","is_error":false,"session_id":"s-fa
 // The setting is written as the store's JSON holds it, which is also how an
 // older module reads a store a newer rota wrote.
 func TestStoreRun_ClaudeKeepingItsConversationsToItselfLinksToNone(t *testing.T) {
-	if strings.HasPrefix(rota.Version, "1.0.") {
-		t.Skipf("rota %s keeps every account's conversations shared", rota.Version)
-	}
 	src := claudeWorld(t)
 	if err := os.Mkdir(filepath.Join(src, "projects"), 0o700); err != nil {
 		t.Fatal(err)
@@ -123,9 +113,6 @@ printf '{"type":"result","subtype":"success","is_error":false,"session_id":"s-fa
 // next launch, and Claude Code cannot create a directory through one. Two
 // accounts given the same folder share those conversations and no others.
 func TestStoreRun_ClaudeConversationsGoWhereTheAccountWasPointed(t *testing.T) {
-	if strings.HasPrefix(rota.Version, "1.0.") {
-		t.Skipf("rota %s has nowhere to put them but the shared directory", rota.Version)
-	}
 	claudeWorld(t)
 	fake.CLI(t, "claude", `cat >/dev/null
 printf '{"type":"result","subtype":"success","is_error":false,"session_id":"s-fake","result":"CFG=%s","num_turns":1}\n' "$CLAUDE_CONFIG_DIR"

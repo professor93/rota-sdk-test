@@ -22,7 +22,6 @@ func askingClaude() string {
 // The reply is the answer as the CLI gave it, and nothing read out of it
 // unless "with" names a reading.
 func TestRun_ReplyIsTheAnswerAloneUnlessAsked(t *testing.T) {
-	since(t, "1.1.0")
 	s := start(t, opts{claude: askingClaude()})
 	code, _, raw := s.run(2, `{"prompt":"p"}`)
 	if code != 200 || strings.Contains(string(raw), `"blocks"`) || strings.Contains(string(raw), `"ask"`) {
@@ -31,7 +30,6 @@ func TestRun_ReplyIsTheAnswerAloneUnlessAsked(t *testing.T) {
 }
 
 func TestRun_WithNamesTheReadings(t *testing.T) {
-	since(t, "1.1.0")
 	s := start(t, opts{claude: askingClaude()})
 	for _, with := range []string{`["blocks","ask"]`, `["blocks,ask"]`, `["ask","blocks"]`} {
 		code, _, raw := s.run(2, `{"prompt":"p","with":`+with+`}`)
@@ -46,7 +44,6 @@ func TestRun_WithNamesTheReadings(t *testing.T) {
 }
 
 func TestRun_UnknownReadingIs400(t *testing.T) {
-	since(t, "1.1.0")
 	s := start(t, opts{claude: askingClaude()})
 	code, _, raw := s.run(2, `{"prompt":"p","with":["blocks","foo"]}`)
 	if code != 400 || !strings.Contains(string(raw), "foo") || !strings.Contains(string(raw), "blocks, ask") {
@@ -55,7 +52,6 @@ func TestRun_UnknownReadingIs400(t *testing.T) {
 }
 
 func TestRun_StreamedTextCarriesBlocksOnlyWithWith(t *testing.T) {
-	since(t, "1.1.0")
 	s := start(t, opts{claude: askingClaude()})
 	_, raw := s.do("POST", "/v1/accounts/2/run", `{"prompt":"p","stream":true}`, "Accept", "application/x-ndjson")
 	if strings.Contains(string(raw), `"blocks"`) {
@@ -70,7 +66,6 @@ func TestRun_StreamedTextCarriesBlocksOnlyWithWith(t *testing.T) {
 // A failed run keeps its answer empty: the reason is in stderr, where the
 // CLI put it, and result is the answer or nothing.
 func TestRun_FailedRunKeepsResultEmpty(t *testing.T) {
-	since(t, "1.1.0")
 	s := start(t, opts{claude: "cat >/dev/null\necho fake-stderr >&2\nexit 2\n"})
 	code, out, raw := s.run(2, `{"prompt":"p"}`)
 	if code != 502 || !out.IsError || out.ExitCode != 2 || out.Result != "" || out.Stderr != "fake-stderr" {

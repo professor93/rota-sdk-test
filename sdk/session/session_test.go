@@ -1,10 +1,5 @@
-// These pin rota.Start, which the pinned module does not have yet: 1.0.6
-// has no session at all, so a file naming it cannot be compiled against the
-// module the rest of this suite proves. They build only under `make local`,
-// against the checkout beside this one, until go.mod moves to 1.1.0 — at
-// which point this constraint goes and the package joins the ordinary run.
-
-//go:build local
+// These pin rota.Start and the Session it returns: a run that stays open
+// for more messages.
 
 package session_test
 

@@ -120,6 +120,12 @@
 |---|---:|---|
 | Run | 24 | TestRun_BufferedArrayOutputIsParsed, TestRun_CodexEventStream, TestRun_ContextCancelKills, TestRun_CwdIsSymlinkResolved, TestRun_DefaultLimitsLeaveSmallOutputAlone, TestRun_GrokBufferedShape, TestRun_HermeticSetsTempConfigDirAndRemovesIt, TestRun_KimiProseBecomesResult, TestRun_MaxBufferedOutputTruncates, TestRun_MaxEventLineTruncates, TestRun_MaxEventsTruncates, TestRun_MaxStderrKeepsTheTail, TestRun_MissingBinaryIsUnsupported, TestRun_NilCommandNeedsBaseEnv, TestRun_NonZeroExitIsAResultNotAnError, TestRun_PromptOnStdinArgvVisibleFieldsFilled, TestRun_ResumeLastBecomesContinue, TestRun_ScratchFilesAreRemoved, TestRun_SignInCheckerConsulted, TestRun_SpacedJSONStillParsed, TestRun_StreamingEventsIncludedOnlyWhenAsked, TestRun_StructuredOutputCaptured, TestRun_SuppliedCommandRunsWithOnlyItsEnv, TestRun_TimeoutKillsAndReturnsResult |
 
+## rotatest/sdk/session
+
+| Symbol | Conditions | Tests |
+|---|---:|---|
+| Start | 2 | TestStart_RefusesInputWithoutStreamAndRunRefusesInput, TestStart_TakesMoreMessagesAndReportsThem |
+
 ## rotatest/sdk/spec
 
 | Symbol | Conditions | Tests |

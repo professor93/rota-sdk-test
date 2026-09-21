@@ -428,9 +428,6 @@ func TestClaudeLaunch_EnvAndDrops(t *testing.T) {
 // are the only truthful source for a status line or a hook.
 func TestClaudeLaunch_IdentityVariables(t *testing.T) {
 	setup(t)
-	if strings.HasPrefix(rota.Version, "1.0.") {
-		t.Skipf("identity variables arrived after %s", rota.Version)
-	}
 	a := account()
 	a.Email = "who@example.com"
 	cmd, err := rota.Stage(a, "")

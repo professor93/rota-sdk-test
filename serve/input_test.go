@@ -190,7 +190,6 @@ func (s *server) startInput(prompt string) (*stream, string) {
 // accepted and then answered in the same conversation, an interrupt is
 // acknowledged, and the stream says what became of every one of them.
 func TestRun_InputRunTakesMessagesByID(t *testing.T) {
-	since(t, "1.1.0")
 	s := start(t, opts{claude: fake.Echo()})
 	st, id := s.startInput("p")
 
@@ -262,7 +261,6 @@ func has(texts []string, want string) bool {
 // about itself and is one of the runs listed, while it runs and after it has
 // ended.
 func TestRun_InputRunIsDescribedAndListed(t *testing.T) {
-	since(t, "1.1.0")
 	s := start(t, opts{claude: fake.Echo()})
 	st, id := s.startInput("p")
 
@@ -315,7 +313,6 @@ func listed(runs []any, id string) bool {
 // 404, a message with nothing in it is a 400, and a run that has ended takes
 // nothing more.
 func TestRun_InputRunRefusesWhatItCannot(t *testing.T) {
-	since(t, "1.1.0")
 	s := start(t, opts{claude: fake.Echo()})
 
 	for _, call := range [][2]string{
@@ -362,7 +359,6 @@ func str(v any) string {
 // The connection is not the run. A reader that drops leaves the run going,
 // and what it missed is replayed to it when it comes back.
 func TestRun_InputRunReplaysOnReattach(t *testing.T) {
-	since(t, "1.1.0")
 	s := start(t, opts{claude: fake.Echo()})
 	st, id := s.startInput("p")
 	st.cancel() // the reader goes away; the run keeps its grace

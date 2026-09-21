@@ -201,11 +201,7 @@ func TestRun_NonZeroExitIsAResultNotAnError(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := ""
-	if strings.HasPrefix(rota.Version, "1.0.") {
-		want = "fake-stderr"
-	}
-	if !res.IsError || res.ExitCode != 2 || res.Result != want || !strings.Contains(res.Stderr, "fake-stderr") {
+	if !res.IsError || res.ExitCode != 2 || res.Result != "" || !strings.Contains(res.Stderr, "fake-stderr") {
 		t.Fatalf("%+v", res)
 	}
 }

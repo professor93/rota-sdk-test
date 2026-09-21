@@ -262,7 +262,6 @@ func closeCode(payload []byte) uint16 {
 // out of it, and messages, interrupts and the close go in — each acknowledged
 // by the ref the client gave it.
 func TestWS_StartsARunAndCarriesItBothWays(t *testing.T) {
-	since(t, "1.1.0")
 	s := start(t, opts{claude: fake.Echo()})
 	c := s.dialRun("/v1/accounts/2/ws")
 
@@ -310,7 +309,6 @@ func TestWS_StartsARunAndCarriesItBothWays(t *testing.T) {
 // The socket and the endpoints are two ways to the same run: one started over
 // HTTP is picked up on a socket, from where its first reader got to.
 func TestWS_AttachesToARunStartedOverHTTP(t *testing.T) {
-	since(t, "1.1.0")
 	s := start(t, opts{claude: fake.Echo()})
 	st, id := s.startInput("p")
 	st.cancel() // the first reader drops; the run goes on through its grace
@@ -341,7 +339,6 @@ func TestWS_AttachesToARunStartedOverHTTP(t *testing.T) {
 // a browser can set — and never in the URL, which is written to every log on
 // the way.
 func TestWS_AuthIsCheckedBeforeTheUpgrade(t *testing.T) {
-	since(t, "1.1.0")
 	s := start(t, opts{claude: fake.Echo()})
 	for _, call := range []struct {
 		what    string
@@ -373,7 +370,6 @@ func TestWS_AuthIsCheckedBeforeTheUpgrade(t *testing.T) {
 // A start frame this server will not act on costs nothing: it is refused by
 // name, in one frame, before any account is spent.
 func TestWS_ABadStartIsRefused(t *testing.T) {
-	since(t, "1.1.0")
 	s := start(t, opts{claude: fake.Echo()})
 	c := s.dialRun("/v1/accounts/2/ws")
 

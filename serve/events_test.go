@@ -84,7 +84,6 @@ func ndjson(t *testing.T, raw []byte) []map[string]any {
 }
 
 func TestRun_PartialMessagesStreamDeltasThenTheWhole(t *testing.T) {
-	since(t, "1.1.0")
 	s := start(t, opts{claude: partialClaude()})
 	resp, raw := s.do("POST", "/v1/accounts/2/run",
 		`{"prompt":"p","stream":true,"include_partial_messages":true}`, "Accept", "application/x-ndjson")
@@ -121,7 +120,6 @@ func TestRun_PartialMessagesStreamDeltasThenTheWhole(t *testing.T) {
 }
 
 func TestRun_PartialMessagesNeedAStream(t *testing.T) {
-	since(t, "1.1.0")
 	s := start(t, opts{claude: partialClaude()})
 	code, _, raw := s.run(2, `{"prompt":"p","include_partial_messages":true}`)
 	if code != 400 || !strings.Contains(string(raw), "include_partial_messages") || !strings.Contains(string(raw), "stream") {
@@ -130,7 +128,6 @@ func TestRun_PartialMessagesNeedAStream(t *testing.T) {
 }
 
 func TestRun_UsageEventCarriesTheMessagesNumbers(t *testing.T) {
-	since(t, "1.1.0")
 	s := start(t, opts{claude: partialClaude()})
 	_, raw := s.do("POST", "/v1/accounts/2/run",
 		`{"prompt":"p","stream":true,"include_partial_messages":true}`, "Accept", "application/x-ndjson")
@@ -150,7 +147,6 @@ func TestRun_UsageEventCarriesTheMessagesNumbers(t *testing.T) {
 }
 
 func TestRun_DoneCarriesTheTotals(t *testing.T) {
-	since(t, "1.1.0")
 	s := start(t, opts{claude: partialClaude()})
 	resp, raw := s.do("POST", "/v1/accounts/2/run", `{"prompt":"p","stream":true}`)
 	if resp.StatusCode != 200 {
@@ -165,7 +161,6 @@ func TestRun_DoneCarriesTheTotals(t *testing.T) {
 }
 
 func TestRun_ToolEventCarriesTheToolsInput(t *testing.T) {
-	since(t, "1.1.0")
 	s := start(t, opts{claude: fake.Lines(
 		`{"type":"system","subtype":"init","session_id":"s-t"}`,
 		`{"type":"assistant","message":{"content":[{"type":"tool_use","id":"toolu_1","name":"Read","input":{"file_path":"/srv/api/go.mod"}}]},"session_id":"s-t"}`,
