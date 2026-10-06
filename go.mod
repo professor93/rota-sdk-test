@@ -2,4 +2,4 @@ module rotatest
 
 go 1.27
 
-require github.com/professor93/rota v1.1.0
+require github.com/professor93/rota v1.3.0
