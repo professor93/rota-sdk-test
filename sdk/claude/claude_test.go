@@ -5,7 +5,11 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
+	"runtime"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -441,7 +445,26 @@ func TestClaudeLaunch_IdentityVariables(t *testing.T) {
 	}
 }
 
-func TestClaudeLaunch_ConfigDirComesFromAccountNotHome(t *testing.T) {
+func TestClaudeStage_NoHomeUsesTheAccountsConfigDir(t *testing.T) {
+	setup(t)
+	a := account()
+	a.ConfigDir = "/tmp/x"
+	cmd, err := rota.Stage(a, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Contains(cmd.Env, "CLAUDE_CONFIG_DIR=/tmp/x") || !slices.Contains(cmd.Env, "CLAUDE_CODE_OAUTH_TOKEN=A0") {
+		t.Fatalf("env %v", cmd.Env)
+	}
+}
+
+// Since 1.3.0 a home given to Stage is where the login lives: on Linux the
+// child is pointed at the home and given no token, and the login is the one
+// file Stage writes there. macOS keeps the login in the keychain, which the
+// on-disk Stage cannot see, and Windows keeps the token route altogether, so
+// on both the home is ignored and the account's ConfigDir is what the child
+// sees, as it was before.
+func TestClaudeStage_HomeKeepsTheLoginWhereThePlatformDoes(t *testing.T) {
 	setup(t)
 	a := account()
 	a.ConfigDir = "/tmp/x"
@@ -450,8 +473,16 @@ func TestClaudeLaunch_ConfigDirComesFromAccountNotHome(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !slices.Contains(cmd.Env, "CLAUDE_CONFIG_DIR=/tmp/x") || slices.Contains(cmd.Env, "CLAUDE_CONFIG_DIR="+home) {
-		t.Fatalf("env %v", cmd.Env)
+	stored := !older(rota.Version, "1.3.0") && runtime.GOOS != "windows" && runtime.GOOS != "darwin"
+	hasHome := slices.Contains(cmd.Env, "CLAUDE_CONFIG_DIR="+home)
+	hasOwn := slices.Contains(cmd.Env, "CLAUDE_CONFIG_DIR=/tmp/x")
+	hasToken := slices.Contains(cmd.Env, "CLAUDE_CODE_OAUTH_TOKEN=A0")
+	_, statErr := os.Stat(filepath.Join(home, ".credentials.json"))
+	switch {
+	case stored && (!hasHome || hasOwn || hasToken || statErr != nil):
+		t.Fatalf("stored route expected: env %v, login file: %v", cmd.Env, statErr)
+	case !stored && (hasHome || !hasOwn || !hasToken || statErr == nil):
+		t.Fatalf("token route expected: env %v, login file: %v", cmd.Env, statErr)
 	}
 }
 
@@ -471,4 +502,23 @@ func TestClaudeStage_DeadIsReauth(t *testing.T) {
 	if !errors.Is(err, rota.ErrReauth) {
 		t.Fatalf("err %v", err)
 	}
+}
+
+// older reports whether a dotted version reads before another, number by
+// number, with a missing number as 0.
+func older(a, b string) bool {
+	as, bs := strings.Split(a, "."), strings.Split(b, ".")
+	for i := 0; i < len(as) || i < len(bs); i++ {
+		var x, y int
+		if i < len(as) {
+			x, _ = strconv.Atoi(as[i])
+		}
+		if i < len(bs) {
+			y, _ = strconv.Atoi(bs[i])
+		}
+		if x != y {
+			return x < y
+		}
+	}
+	return false
 }

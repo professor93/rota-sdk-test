@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -63,6 +64,24 @@ type opts struct {
 	// what start gives it. For the few tests about what the server reads
 	// from the world around it rather than from its store.
 	env []string
+	// config is a server.toml written beside the store and named with
+	// --config. For the tests about a server configured by a file rather
+	// than by a command line.
+	config string
+	// noToken leaves --token off, for a server whose token the file gives.
+	noToken bool
+	// args are appended to the command line as typed.
+	args []string
+	// ready is the path start waits on before handing the server over. The
+	// default is "/", which a server with its playground routes off does
+	// not answer.
+	ready string
+	// home is the store directory, for the few tests that need one at a
+	// particular path. The default is this test's own temporary directory,
+	// which is where every other test wants it; the exception is the socket
+	// a local terminal is shared through, whose address a temporary
+	// directory named after the test is usually too long for.
+	home string
 }
 
 // server is one running rota serve with its own store and fake CLIs.
@@ -72,6 +91,7 @@ type server struct {
 	token  string
 	home   string // ROTA_HOME
 	root   string // the --root directory when opts.root was set
+	config string // the server.toml when opts.config was set
 	stderr *lockedBuffer
 }
 
@@ -139,7 +159,10 @@ func start(t *testing.T, o opts) *server {
 	if buildErr != nil {
 		t.Skip(buildErr)
 	}
-	home := t.TempDir()
+	home := o.home
+	if home == "" {
+		home = t.TempDir()
+	}
 	if o.accounts == "" {
 		o.accounts = seed()
 	}
@@ -160,8 +183,20 @@ func start(t *testing.T, o opts) *server {
 	}
 
 	addr := freeAddr(t)
-	args := []string{"serve", addr, "--token", token, "--refresh-every", "0"}
+	args := []string{"serve", addr, "--refresh-every", "0"}
+	if !o.noToken {
+		args = append(args, "--token", token)
+	}
 	s := &server{t: t, url: "http://" + addr, token: token, home: home, stderr: &lockedBuffer{}}
+	if o.config != "" {
+		s.config = filepath.Join(t.TempDir(), "server.toml")
+		// The file may hold a token, so rota refuses to read one anybody
+		// else can: writing it any other way would test the refusal.
+		if err := os.WriteFile(s.config, []byte(o.config), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		args = append(args, "--config", s.config)
+	}
 	if o.root {
 		s.root = t.TempDir()
 		args = append(args, "--root", s.root)
@@ -175,6 +210,7 @@ func start(t *testing.T, o opts) *server {
 	if o.timeout > 0 {
 		args = append(args, "--timeout", o.timeout.String())
 	}
+	args = append(args, o.args...)
 	cmd := exec.Command(rotaBin, args...)
 	// The child sees only what it needs: the fakes and the shell's own
 	// tools, a private HOME so no real CLI configuration is read, and the
@@ -206,6 +242,10 @@ func start(t *testing.T, o opts) *server {
 		}
 	})
 
+	ready := o.ready
+	if ready == "" {
+		ready = "/"
+	}
 	deadline := time.Now().Add(10 * time.Second)
 	for {
 		select {
@@ -213,7 +253,12 @@ func start(t *testing.T, o opts) *server {
 			t.Fatalf("rota serve exited before answering: %v\n%s", err, s.stderr.String())
 		default:
 		}
-		if resp, err := client.Get(s.url + "/"); err == nil {
+		req, err := http.NewRequest("GET", s.url+ready, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header.Set("Authorization", "Bearer "+s.token)
+		if resp, err := client.Do(req); err == nil {
 			resp.Body.Close()
 			if resp.StatusCode == http.StatusOK {
 				return s
@@ -224,6 +269,28 @@ func start(t *testing.T, o opts) *server {
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
+}
+
+// serveOnce runs rota serve to completion, for the arguments that make it
+// print something and exit rather than listen. It returns everything the
+// command wrote and the status it ended with.
+func serveOnce(t *testing.T, home string, args ...string) (string, int) {
+	t.Helper()
+	if buildErr != nil {
+		t.Skip(buildErr)
+	}
+	cmd := exec.Command(rotaBin, append([]string{"serve"}, args...)...)
+	cmd.Env = []string{"PATH=/usr/bin:/bin", "HOME=" + t.TempDir(), "ROTA_HOME=" + home}
+	out, err := cmd.CombinedOutput()
+	var exit *exec.ExitError
+	switch {
+	case err == nil:
+		return string(out), 0
+	case errors.As(err, &exit):
+		return string(out), exit.ExitCode()
+	}
+	t.Fatalf("rota serve %s: %v", strings.Join(args, " "), err)
+	return "", 0
 }
 
 // freeAddr picks a loopback port nothing is listening on right now.

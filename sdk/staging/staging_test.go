@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"reflect"
 	"slices"
+	"strconv"
+	"strings"
 	"testing"
 	"testing/fstest"
 
@@ -286,7 +288,9 @@ func TestOwnsCredentials_AdopterOrDelegator(t *testing.T) {
 		provider string
 		want     bool
 	}{
-		{"claude", false},
+		// Since 1.3.0 claude keeps a login in the account's home and adopts what
+		// Claude Code rotates there, so it owns credentials like codex does.
+		{"claude", !older(rota.Version, "1.3.0")},
 		{"codex", true},
 		{"grok", true},
 		{"kimi", true},
@@ -316,4 +320,23 @@ func TestLoginPlanFor_NeedsDelegatedAccountAndDelegator(t *testing.T) {
 	if !ok || !reflect.DeepEqual(got, plan) {
 		t.Fatalf("ok=%v plan=%+v", ok, got)
 	}
+}
+
+// older reports whether a dotted version reads before another, number by
+// number, with a missing number as 0.
+func older(a, b string) bool {
+	as, bs := strings.Split(a, "."), strings.Split(b, ".")
+	for i := 0; i < len(as) || i < len(bs); i++ {
+		var x, y int
+		if i < len(as) {
+			x, _ = strconv.Atoi(as[i])
+		}
+		if i < len(bs) {
+			y, _ = strconv.Atoi(bs[i])
+		}
+		if x != y {
+			return x < y
+		}
+	}
+	return false
 }

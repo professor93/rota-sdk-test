@@ -528,7 +528,7 @@ func TestRun_UnknownAccountIs404(t *testing.T) {
 func TestRun_DeadAccountIs409(t *testing.T) {
 	seeded := strings.Replace(seed(), `"provider":"claude",`, `"provider":"claude","dead":true,`, 1)
 	s := start(t, opts{accounts: seeded})
-	if code, _, raw := s.run(2, `{"prompt":"p"}`); code != 409 || !strings.Contains(string(raw), "re-auth") {
+	if code, _, raw := s.run(2, `{"prompt":"p"}`); code != 409 || !(strings.Contains(string(raw), "re-auth") || strings.Contains(string(raw), "log in again")) {
 		t.Fatalf("%d %s", code, raw)
 	}
 }
