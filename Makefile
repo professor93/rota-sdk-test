@@ -3,8 +3,9 @@
 #   make test     offline: every method, every condition, no network
 #   make live     ROTA_LIVE=1: the real accounts in ~/.rota, small prompts
 #   make login    ROTA_LOGIN=1: one real claude login into a temporary store
-#   make local    offline suite against ../cswapgo instead of the proxy, with
-#                 the tests that need what it has and the proxy does not
+#   make local    offline suite against ../cswapgo, its binary included,
+#                 instead of the proxy, with the tests that need what it has
+#                 and the proxy does not
 #   make matrix   docs/matrix.md, every test grouped by the symbol it covers
 
 .PHONY: test live login local matrix
@@ -19,7 +20,8 @@ login:
 	ROTA_LOGIN=1 go run ./cmd/login
 
 local:
-	GOWORK=$(CURDIR)/go.work.local go test -tags local -count=1 ./...
+	go -C ../cswapgo build -o $(CURDIR)/bin/rota ./cmd/rota
+	ROTA_BIN=$(CURDIR)/bin/rota GOWORK=$(CURDIR)/go.work.local go test -tags local -count=1 ./...
 
 matrix:
 	go run ./cmd/matrix > docs/matrix.md

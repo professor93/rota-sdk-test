@@ -20,9 +20,17 @@ import (
 	"time"
 )
 
-// The pinned server binary, built once for the whole package. A build
-// failure is remembered rather than fatal, so every test can skip with the
-// reason instead of the package refusing to run.
+// The server binary under test, settled once for the whole package.
+//
+// ROTA_BIN names it: an absolute path to a binary whose version prints
+// "rota <version>". Given one, the package builds nothing and runs that
+// file, and a value that is not absolute or a binary that does not answer
+// so stops the package with "ROTA_BIN=<value>: <reason>" before any test
+// runs, so a wrong binary fails rather than skips.
+//
+// Unset or empty, the pinned module's cmd/rota is built by import path. A
+// build failure is then remembered rather than fatal, so every test can
+// skip with the reason instead of the package refusing to run.
 var (
 	rotaBin    string
 	binVersion string
@@ -30,6 +38,15 @@ var (
 )
 
 func TestMain(m *testing.M) {
+	if bin := os.Getenv("ROTA_BIN"); bin != "" {
+		v, err := givenBin(bin)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "ROTA_BIN=%s: %v\n", bin, err)
+			os.Exit(1)
+		}
+		rotaBin, binVersion = bin, v
+		os.Exit(m.Run())
+	}
 	dir, err := os.MkdirTemp("", "rota-serve-*")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -39,16 +56,36 @@ func TestMain(m *testing.M) {
 	build := exec.Command("go", "build", "-o", rotaBin, "github.com/professor93/rota/cmd/rota")
 	if out, err := build.CombinedOutput(); err != nil {
 		buildErr = fmt.Errorf("building the pinned rota binary: %v\n%s", err, out)
-	} else if out, err := exec.Command(rotaBin, "version").Output(); err != nil {
-		buildErr = fmt.Errorf("rota version: %v", err)
-	} else if f := strings.Fields(string(out)); len(f) != 2 || f[0] != "rota" {
-		buildErr = fmt.Errorf("rota version printed %q, want \"rota <version>\"", out)
+	} else if v, err := versionOf(rotaBin); err != nil {
+		buildErr = err
 	} else {
-		binVersion = f[1]
+		binVersion = v
 	}
 	code := m.Run()
 	os.RemoveAll(dir)
 	os.Exit(code)
+}
+
+// givenBin is the version of the binary ROTA_BIN names, or why it cannot
+// be the one under test.
+func givenBin(bin string) (string, error) {
+	if !filepath.IsAbs(bin) {
+		return "", errors.New("not an absolute path")
+	}
+	return versionOf(bin)
+}
+
+// versionOf is what bin's version prints after "rota".
+func versionOf(bin string) (string, error) {
+	out, err := exec.Command(bin, "version").Output()
+	if err != nil {
+		return "", fmt.Errorf("rota version: %v", err)
+	}
+	f := strings.Fields(string(out))
+	if len(f) != 2 || f[0] != "rota" {
+		return "", fmt.Errorf("rota version printed %q, want \"rota <version>\"", out)
+	}
+	return f[1], nil
 }
 
 // opts is what a test may vary about its server. Everything unset gets the

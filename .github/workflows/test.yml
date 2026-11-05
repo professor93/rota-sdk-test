@@ -22,4 +22,9 @@ jobs:
           go-version-file: go.mod
       - run: test -z "$(gofmt -l .)"
       - run: go vet ./...
+      - name: the program at the pinned version
+        run: |
+          v=$(go list -m -f '{{.Version}}' github.com/professor93/rota)
+          GOBIN="$RUNNER_TEMP/bin" go install "github.com/professor93/rota/cmd/rota@$v"
+          echo "ROTA_BIN=$RUNNER_TEMP/bin/rota" >> "$GITHUB_ENV"
       - run: go test ./...
