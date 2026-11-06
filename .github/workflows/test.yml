@@ -24,7 +24,7 @@ jobs:
       - run: go vet ./...
       - name: the program at its own pinned version
         run: |
-          v=$(tr -d ' \n' < program.version)
+          v=$(go list -m -f '{{.Version}}' github.com/professor93/rota)
           GOBIN="$RUNNER_TEMP/bin" go install "github.com/professor93/rota/cmd/rota@$v"
           echo "ROTA_BIN=$RUNNER_TEMP/bin/rota" >> "$GITHUB_ENV"
       - run: go test ./...

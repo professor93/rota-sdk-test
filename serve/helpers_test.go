@@ -83,7 +83,11 @@ func versionOf(bin string) (string, error) {
 	var stdout, stderr bytes.Buffer
 	cmd := exec.CommandContext(ctx, bin, "version")
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
+	cmd.WaitDelay = 5 * time.Second
 	if err := cmd.Run(); err != nil {
+		if ctx.Err() != nil {
+			err = errors.New("timed out after 30s")
+		}
 		return "", fmt.Errorf("rota version: %v: %s", err, strings.TrimSpace(stderr.String()))
 	}
 	m := versionLine.FindStringSubmatch(stdout.String())
