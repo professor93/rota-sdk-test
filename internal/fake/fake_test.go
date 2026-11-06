@@ -3,6 +3,7 @@ package fake_test
 import (
 	"context"
 	"net/http"
+	"strings"
 	"testing"
 
 	rota "github.com/professor93/rota/lib"
@@ -62,6 +63,23 @@ func TestServerDecodesJSONAndForms(t *testing.T) {
 	}
 	if s.Hits("/missing") != 0 || s.Hits("/echo") != 1 {
 		t.Fatalf("hits: %d %d", s.Hits("/missing"), s.Hits("/echo"))
+	}
+}
+
+// The client a fake server hands rota reaches that server, and refuses a
+// host off this machine before it is looked up or dialled: an endpoint a
+// test left unpointed never takes a credential anywhere real.
+func TestServerClientReachesNothingOffThisMachine(t *testing.T) {
+	s := fake.NewServer(t)
+	s.Handle("/ok", func(*http.Request, map[string]any) (int, any) { return 200, fake.Reply{} })
+	resp, err := s.Client().Get(s.URL + "/ok")
+	if err != nil || resp.StatusCode != 200 {
+		t.Fatal(err, resp)
+	}
+	resp.Body.Close()
+	_, err = s.Client().Get("https://models.example.invalid/v1/models")
+	if err == nil || !strings.Contains(err.Error(), "off this machine") {
+		t.Fatalf("a host off this machine must be refused before it is dialled: %v", err)
 	}
 }
 

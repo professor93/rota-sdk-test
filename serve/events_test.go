@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"rotatest/internal/fake"
+	"rotatest/internal/release"
 )
 
 // partialClaude prints what claude prints with --include-partial-messages:
@@ -34,39 +35,7 @@ func since(t *testing.T, version string) {
 	if binVersion == "" {
 		return // no binary at all is reported by start
 	}
-	if older(binVersion, version) {
-		t.Skipf("rota %s predates %s, which this pins", binVersion, version)
-	}
-}
-
-// older reports whether a dotted version reads before another, number by
-// number, with a missing number as 0.
-func older(a, b string) bool {
-	as, bs := strings.Split(strings.TrimPrefix(a, "v"), "."), strings.Split(strings.TrimPrefix(b, "v"), ".")
-	for i := range max(len(as), len(bs)) {
-		var x, y int
-		if i < len(as) {
-			x = atoi(as[i])
-		}
-		if i < len(bs) {
-			y = atoi(bs[i])
-		}
-		if x != y {
-			return x < y
-		}
-	}
-	return false
-}
-
-func atoi(s string) int {
-	n := 0
-	for _, r := range s {
-		if r < '0' || r > '9' {
-			break
-		}
-		n = n*10 + int(r-'0')
-	}
-	return n
+	release.Since(t, binVersion, version)
 }
 
 // ndjson reads one object per line.

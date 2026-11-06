@@ -19,6 +19,7 @@ import (
 
 	rota "github.com/professor93/rota/lib"
 	"rotatest/internal/fake"
+	"rotatest/internal/release"
 )
 
 var ctx = context.Background()
@@ -44,7 +45,7 @@ func keyAccount(t *testing.T, extra string) *rota.Account {
 // long-lived token the account somehow holds, because a key account is
 // billed to its key and to nothing else. Nothing is written into the home.
 func TestStage_AKeyAccountRunsOnItsKeyAlone(t *testing.T) {
-	gateRelease(t, "1.4.0-beta.1")
+	release.Since(t, rota.Version, "1.4.0-beta.1")
 	fake.Registry(t)
 	a := keyAccount(t, `,"long":{"accessToken":"long-tok","expiresAt":4102444800000}`)
 	home := t.TempDir()
@@ -76,7 +77,7 @@ func TestStage_AKeyAccountRunsOnItsKeyAlone(t *testing.T) {
 // TestStagePlan_AKeyAccountStagesNoFile: the plan an application carries
 // out itself has nothing to write either.
 func TestStagePlan_AKeyAccountStagesNoFile(t *testing.T) {
-	gateRelease(t, "1.4.0-beta.1")
+	release.Since(t, rota.Version, "1.4.0-beta.1")
 	fake.Registry(t)
 	cmd, files, err := rota.StagePlan(ctx, keyAccount(t, ""), t.TempDir())
 	if err != nil || len(files) != 0 || !slices.Contains(cmd.Env, "ANTHROPIC_API_KEY="+key) {
@@ -87,7 +88,7 @@ func TestStagePlan_AKeyAccountStagesNoFile(t *testing.T) {
 // TestUsage_AKeyAccountReadsNothing: a key has no plan behind it and no
 // usage to read, so nothing is asked.
 func TestUsage_AKeyAccountReadsNothing(t *testing.T) {
-	gateRelease(t, "1.4.0-beta.1")
+	release.Since(t, rota.Version, "1.4.0-beta.1")
 	fake.Registry(t)
 	s := fake.NewServer(t)
 	s.Claude(t)
@@ -104,7 +105,7 @@ func TestUsage_AKeyAccountReadsNothing(t *testing.T) {
 // else "api key" and the key's last four characters, which are the only
 // part of a key anything shows.
 func TestLabel_AKeyAccountShowsOnlyItsLastFour(t *testing.T) {
-	gateRelease(t, "1.4.0-beta.1")
+	release.Since(t, rota.Version, "1.4.0-beta.1")
 	if got := keyAccount(t, "").Label(); got != "api key ...Ab12" {
 		t.Fatalf("label %q", got)
 	}
@@ -116,7 +117,7 @@ func TestLabel_AKeyAccountShowsOnlyItsLastFour(t *testing.T) {
 // TestCheckProject_AKeyAccountTakesNoRemoteControl: Claude Code's Remote
 // Control needs a claude.ai login and refuses a key.
 func TestCheckProject_AKeyAccountTakesNoRemoteControl(t *testing.T) {
-	gateRelease(t, "1.4.0-beta.1")
+	release.Since(t, rota.Version, "1.4.0-beta.1")
 	err := keyAccount(t, `,"remoteControl":true`).CheckProject()
 	if !errors.Is(err, rota.ErrInvalidRequest) || !strings.Contains(err.Error(), "API key") || strings.Contains(err.Error(), "SUITEONLY") {
 		t.Fatalf("%v", err)
@@ -129,7 +130,7 @@ func TestCheckProject_AKeyAccountTakesNoRemoteControl(t *testing.T) {
 // TestEncode_AKeyAccountKeepsWhatItIs: written back the way a store keeps
 // it, the account still says it runs on a key, and keeps its name.
 func TestEncode_AKeyAccountKeepsWhatItIs(t *testing.T) {
-	gateRelease(t, "1.4.0-beta.1")
+	release.Since(t, rota.Version, "1.4.0-beta.1")
 	raw, err := json.Marshal(keyAccount(t, `,"name":"ci"`))
 	if err != nil {
 		t.Fatal(err)
@@ -139,85 +140,4 @@ func TestEncode_AKeyAccountKeepsWhatItIs(t *testing.T) {
 			t.Fatalf("%s lacks %s", raw, want)
 		}
 	}
-}
-
-// gateRelease skips unless the module under test is at least version,
-// reading pre-releases as releases do: 1.4.0-beta.2 comes before
-// 1.4.0-beta.3, which comes before 1.4.0.
-func gateRelease(t *testing.T, version string) {
-	t.Helper()
-	if releaseBefore(rota.Version, version) {
-		t.Skipf("rota %s predates %s, which this pins", rota.Version, version)
-	}
-}
-
-// releaseBefore reports whether version a comes before b by semantic
-// versioning: the numbers first, then a release after any pre-release of
-// it, then the pre-release's dotted parts, numbers by value and below
-// words.
-func releaseBefore(a, b string) bool {
-	an, ap := splitRelease(a)
-	bn, bp := splitRelease(b)
-	for i := range max(len(an), len(bn)) {
-		var x, y int
-		if i < len(an) {
-			x = an[i]
-		}
-		if i < len(bn) {
-			y = bn[i]
-		}
-		if x != y {
-			return x < y
-		}
-	}
-	switch {
-	case ap == "" || ap == bp:
-		return false
-	case bp == "":
-		return true
-	}
-	as, bs := strings.Split(ap, "."), strings.Split(bp, ".")
-	for i := range min(len(as), len(bs)) {
-		if as[i] == bs[i] {
-			continue
-		}
-		x, xn := releaseNumber(as[i])
-		y, yn := releaseNumber(bs[i])
-		switch {
-		case xn && yn:
-			return x < y
-		case xn != yn:
-			return xn
-		}
-		return as[i] < bs[i]
-	}
-	return len(as) < len(bs)
-}
-
-// splitRelease is a version's numbers and its pre-release part, without a
-// leading v or any build metadata.
-func splitRelease(v string) ([]int, string) {
-	v, _, _ = strings.Cut(strings.TrimPrefix(v, "v"), "+")
-	core, pre, _ := strings.Cut(v, "-")
-	var nums []int
-	for _, part := range strings.Split(core, ".") {
-		n, _ := releaseNumber(part)
-		nums = append(nums, n)
-	}
-	return nums, pre
-}
-
-// releaseNumber reads a part made of digits alone.
-func releaseNumber(s string) (int, bool) {
-	if s == "" {
-		return 0, false
-	}
-	n := 0
-	for _, r := range s {
-		if r < '0' || r > '9' {
-			return 0, false
-		}
-		n = n*10 + int(r-'0')
-	}
-	return n, true
 }

@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	rota "github.com/professor93/rota/lib"
+	"rotatest/internal/release"
 )
 
 const (
@@ -45,7 +46,7 @@ func TestModule_TheRootRequiresNothing(t *testing.T) {
 // module requires the program's module, which it need not; when it does,
 // it is that module's.
 func TestModule_TheProgramIsAModuleOfItsOwn(t *testing.T) {
-	gateRelease(t, "1.4.0-beta.2")
+	release.Since(t, rota.Version, "1.4.0-beta.2")
 	got := goList(t, "-e", "-f", "{{if .Module}}{{.Module.Path}}{{end}}", program)
 	if got == root {
 		t.Fatalf("%s is still in the root module", program)
@@ -70,85 +71,4 @@ func goList(t *testing.T, args ...string) string {
 		t.Fatalf("go list %s: %v\n%s", strings.Join(args, " "), err, stderr)
 	}
 	return strings.TrimSpace(string(out))
-}
-
-// gateRelease skips unless the module under test is at least version,
-// reading pre-releases as releases do: 1.4.0-beta.2 comes before
-// 1.4.0-beta.3, which comes before 1.4.0.
-func gateRelease(t *testing.T, version string) {
-	t.Helper()
-	if releaseBefore(rota.Version, version) {
-		t.Skipf("rota %s predates %s, which this pins", rota.Version, version)
-	}
-}
-
-// releaseBefore reports whether version a comes before b by semantic
-// versioning: the numbers first, then a release after any pre-release of
-// it, then the pre-release's dotted parts, numbers by value and below
-// words.
-func releaseBefore(a, b string) bool {
-	an, ap := splitRelease(a)
-	bn, bp := splitRelease(b)
-	for i := range max(len(an), len(bn)) {
-		var x, y int
-		if i < len(an) {
-			x = an[i]
-		}
-		if i < len(bn) {
-			y = bn[i]
-		}
-		if x != y {
-			return x < y
-		}
-	}
-	switch {
-	case ap == "" || ap == bp:
-		return false
-	case bp == "":
-		return true
-	}
-	as, bs := strings.Split(ap, "."), strings.Split(bp, ".")
-	for i := range min(len(as), len(bs)) {
-		if as[i] == bs[i] {
-			continue
-		}
-		x, xn := releaseNumber(as[i])
-		y, yn := releaseNumber(bs[i])
-		switch {
-		case xn && yn:
-			return x < y
-		case xn != yn:
-			return xn
-		}
-		return as[i] < bs[i]
-	}
-	return len(as) < len(bs)
-}
-
-// splitRelease is a version's numbers and its pre-release part, without a
-// leading v or any build metadata.
-func splitRelease(v string) ([]int, string) {
-	v, _, _ = strings.Cut(strings.TrimPrefix(v, "v"), "+")
-	core, pre, _ := strings.Cut(v, "-")
-	var nums []int
-	for _, part := range strings.Split(core, ".") {
-		n, _ := releaseNumber(part)
-		nums = append(nums, n)
-	}
-	return nums, pre
-}
-
-// releaseNumber reads a part made of digits alone.
-func releaseNumber(s string) (int, bool) {
-	if s == "" {
-		return 0, false
-	}
-	n := 0
-	for _, r := range s {
-		if r < '0' || r > '9' {
-			return 0, false
-		}
-		n = n*10 + int(r-'0')
-	}
-	return n, true
 }

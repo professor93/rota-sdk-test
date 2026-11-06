@@ -1,9 +1,12 @@
 package fake
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -31,6 +34,7 @@ type Request struct {
 // test wires up. An unregistered path answers 404 and is still recorded.
 type Server struct {
 	*httptest.Server
+	client   *http.Client
 	mu       sync.Mutex
 	handlers map[string]Handler
 	requests []Request
@@ -41,8 +45,31 @@ func NewServer(t testing.TB) *Server {
 	t.Helper()
 	s := &Server{handlers: map[string]Handler{}}
 	s.Server = httptest.NewServer(http.HandlerFunc(s.serve))
-	t.Cleanup(s.Close)
+	s.client = &http.Client{Transport: &http.Transport{DialContext: loopbackOnly}}
+	t.Cleanup(func() {
+		s.Close()
+		s.client.CloseIdleConnections()
+	})
 	return s
+}
+
+// Client is a client for this server that reaches nothing off this machine:
+// a request for any other host fails before it is dialled, so an endpoint a
+// test did not point here can never carry what it was given to the real one.
+func (s *Server) Client() *http.Client { return s.client }
+
+// loopbackOnly dials a loopback address and refuses every other, without
+// looking the name up.
+func loopbackOnly(ctx context.Context, network, addr string) (net.Conn, error) {
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		return nil, err
+	}
+	if ip := net.ParseIP(host); host != "localhost" && (ip == nil || !ip.IsLoopback()) {
+		return nil, fmt.Errorf("fake: %s is off this machine, and a test reaches nothing there", addr)
+	}
+	var d net.Dialer
+	return d.DialContext(ctx, network, addr)
 }
 
 // Handle answers path with h.

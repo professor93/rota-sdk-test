@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
 
 	rota "github.com/professor93/rota/lib"
 	"rotatest/internal/fake"
+	"rotatest/internal/release"
 )
 
 // --- the claude mirror --------------------------------------------------------
@@ -188,28 +188,7 @@ printf '{"type":"result","subtype":"success","is_error":false,"session_id":"s-fa
 // the release it waits for rather than failing on the pin.
 func since(t *testing.T, version string) {
 	t.Helper()
-	if older(rota.Version, version) {
-		t.Skipf("rota %s predates %s, which this pins", rota.Version, version)
-	}
-}
-
-// older reports whether a dotted version reads before another, number by
-// number, with a missing number as 0.
-func older(a, b string) bool {
-	as, bs := strings.Split(strings.TrimPrefix(a, "v"), "."), strings.Split(strings.TrimPrefix(b, "v"), ".")
-	for i := range max(len(as), len(bs)) {
-		var x, y int
-		if i < len(as) {
-			x, _ = strconv.Atoi(as[i])
-		}
-		if i < len(bs) {
-			y, _ = strconv.Atoi(bs[i])
-		}
-		if x != y {
-			return x < y
-		}
-	}
-	return false
+	release.Since(t, rota.Version, version)
 }
 
 // quoted is a path as JSON carries it, backslashes and all.

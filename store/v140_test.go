@@ -16,7 +16,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"testing"
 
 	rota "github.com/professor93/rota/lib"
@@ -35,7 +34,7 @@ printf '{"type":"result","subtype":"success","is_error":false,"session_id":"s-fa
 // long-lived token the account somehow holds, and no login is written into
 // its home.
 func TestStoreRun_AKeyAccountRunsOnItsKeyAlone(t *testing.T) {
-	gateRelease(t, "1.4.0-beta.1")
+	since(t, "1.4.0-beta.1")
 	claudeWorld(t)
 	fake.CLI(t, "claude", envClaude)
 	t.Setenv("CLAUDE_CODE_OAUTH_TOKEN", "inherited")
@@ -70,7 +69,7 @@ var (
 // another account: a home mirrored from the person's directory links none
 // of them, and still links everything else.
 func TestStoreRun_ClaudeMirrorLinksNoOrganisationPolicy(t *testing.T) {
-	gateRelease(t, "1.4.0-beta.2")
+	since(t, "1.4.0-beta.2")
 	noKeychain(t)
 	src := claudeWorld(t)
 	for _, name := range append(append([]string(nil), policy...), nearPolicy...) {
@@ -102,7 +101,7 @@ func TestStoreRun_ClaudeMirrorLinksNoOrganisationPolicy(t *testing.T) {
 // first launch that finds the home quiet, while a real file of that name
 // in the home stays as it is and the person's own files are not touched.
 func TestStoreRun_ClaudeHomeLosesOlderLinksToOrganisationPolicy(t *testing.T) {
-	gateRelease(t, "1.4.0-beta.2")
+	since(t, "1.4.0-beta.2")
 	noKeychain(t)
 	src := claudeWorld(t)
 	for _, name := range policy {
@@ -155,7 +154,7 @@ func TestStoreRun_ClaudeHomeLosesOlderLinksToOrganisationPolicy(t *testing.T) {
 // run at all. The launch is made to panic where every launch saves the
 // store, after its claim is taken.
 func TestStoreRun_APanickingLaunchLetsGoOfTheAccount(t *testing.T) {
-	gateRelease(t, "1.4.0-beta.2")
+	since(t, "1.4.0-beta.2")
 	for _, c := range []struct{ what, provider string }{
 		{"an exclusive claim", "t-alone"},
 		{"a shared claude claim", "claude"},
@@ -196,7 +195,7 @@ func TestStoreRun_APanickingLaunchLetsGoOfTheAccount(t *testing.T) {
 // it reads that file back; a panic there lets the claim go too, and still
 // reaches the caller.
 func TestMaintain_APanickingSweepLetsGoOfTheAccount(t *testing.T) {
-	gateRelease(t, "1.4.0-beta.2")
+	since(t, "1.4.0-beta.2")
 	fake.Registry(t)
 	boom := errors.New("an adoption panicking on purpose")
 	rota.Register(&fake.Owning{
@@ -231,87 +230,4 @@ func noKeychain(t *testing.T) {
 	if runtime.GOOS == "darwin" {
 		t.Skip("a claude home's login is looked for in the keychain on macOS")
 	}
-}
-
-// gateRelease skips unless the module under test is at least version,
-// reading pre-releases as releases do: 1.4.0-beta.2 comes before
-// 1.4.0-beta.3, which comes before 1.4.0. The package's own since reads
-// "1.4.0-beta.3" as later than "1.4.0" and would skip these once 1.4.0 is
-// out, so they gate here instead.
-func gateRelease(t *testing.T, version string) {
-	t.Helper()
-	if releaseBefore(rota.Version, version) {
-		t.Skipf("rota %s predates %s, which this pins", rota.Version, version)
-	}
-}
-
-// releaseBefore reports whether version a comes before b by semantic
-// versioning: the numbers first, then a release after any pre-release of
-// it, then the pre-release's dotted parts, numbers by value and below
-// words.
-func releaseBefore(a, b string) bool {
-	an, ap := splitRelease(a)
-	bn, bp := splitRelease(b)
-	for i := range max(len(an), len(bn)) {
-		var x, y int
-		if i < len(an) {
-			x = an[i]
-		}
-		if i < len(bn) {
-			y = bn[i]
-		}
-		if x != y {
-			return x < y
-		}
-	}
-	switch {
-	case ap == "" || ap == bp:
-		return false
-	case bp == "":
-		return true
-	}
-	as, bs := strings.Split(ap, "."), strings.Split(bp, ".")
-	for i := range min(len(as), len(bs)) {
-		if as[i] == bs[i] {
-			continue
-		}
-		x, xn := releaseNumber(as[i])
-		y, yn := releaseNumber(bs[i])
-		switch {
-		case xn && yn:
-			return x < y
-		case xn != yn:
-			return xn
-		}
-		return as[i] < bs[i]
-	}
-	return len(as) < len(bs)
-}
-
-// splitRelease is a version's numbers and its pre-release part, without a
-// leading v or any build metadata.
-func splitRelease(v string) ([]int, string) {
-	v, _, _ = strings.Cut(strings.TrimPrefix(v, "v"), "+")
-	core, pre, _ := strings.Cut(v, "-")
-	var nums []int
-	for _, part := range strings.Split(core, ".") {
-		n, _ := releaseNumber(part)
-		nums = append(nums, n)
-	}
-	return nums, pre
-}
-
-// releaseNumber reads a part made of digits alone.
-func releaseNumber(s string) (int, bool) {
-	if s == "" {
-		return 0, false
-	}
-	n := 0
-	for _, r := range s {
-		if r < '0' || r > '9' {
-			return 0, false
-		}
-		n = n*10 + int(r-'0')
-	}
-	return n, true
 }

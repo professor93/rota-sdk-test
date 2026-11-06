@@ -18,12 +18,10 @@
 package serve_test
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"os"
@@ -32,7 +30,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 )
@@ -43,7 +40,7 @@ import (
 // server says goes to the file, its own plain lines dated, and nothing to
 // the terminal. The file is made for its owner alone.
 func TestLogFile_TheTerminalStaysQuiet(t *testing.T) {
-	gateRelease(t, "1.4.0-beta.3")
+	since(t, "1.4.0-beta.3")
 	path := filepath.Join(t.TempDir(), "rota.log")
 	s := start(t, opts{accounts: keyedStore(t), args: []string{"--log-file", path}})
 
@@ -68,7 +65,7 @@ func TestLogFile_TheTerminalStaysQuiet(t *testing.T) {
 // TestLogFile_AppendsToWhatIsThere: a restart adds to the log rather
 // than starting it again.
 func TestLogFile_AppendsToWhatIsThere(t *testing.T) {
-	gateRelease(t, "1.4.0-beta.3")
+	since(t, "1.4.0-beta.3")
 	path := filepath.Join(t.TempDir(), "rota.log")
 	if err := os.WriteFile(path, []byte("the server before\n"), 0o600); err != nil {
 		t.Fatal(err)
@@ -83,7 +80,7 @@ func TestLogFile_AppendsToWhatIsThere(t *testing.T) {
 // TestLogFile_QuietStillDecidesHowMuch: the file takes what stderr
 // would have, and --quiet trims it the same way.
 func TestLogFile_QuietStillDecidesHowMuch(t *testing.T) {
-	gateRelease(t, "1.4.0-beta.3")
+	since(t, "1.4.0-beta.3")
 	for _, quiet := range []bool{false, true} {
 		path := filepath.Join(t.TempDir(), "rota.log")
 		args := []string{"--log-file", path}
@@ -107,7 +104,7 @@ func TestLogFile_QuietStillDecidesHowMuch(t *testing.T) {
 // TestLogFile_ComesFromTheFileAndAFlagBeatsIt: log_file is a key in
 // [server] as well as a flag, and the flag wins, as every flag does.
 func TestLogFile_ComesFromTheFileAndAFlagBeatsIt(t *testing.T) {
-	gateRelease(t, "1.4.0-beta.3")
+	since(t, "1.4.0-beta.3")
 	dir := t.TempDir()
 	fromFile, fromFlag := filepath.Join(dir, "file.log"), filepath.Join(dir, "flag.log")
 	config := "[server]\nlog_file = " + strconv.Quote(fromFile) + "\n"
@@ -141,7 +138,7 @@ func TestLogFile_ComesFromTheFileAndAFlagBeatsIt(t *testing.T) {
 // TestLogFile_HasNoEnvironmentVariable: like quiet, it is a key and a
 // flag and nothing else, so a variable named for it changes nothing.
 func TestLogFile_HasNoEnvironmentVariable(t *testing.T) {
-	gateRelease(t, "1.4.0-beta.3")
+	since(t, "1.4.0-beta.3")
 	path := filepath.Join(t.TempDir(), "rota.log")
 	s := start(t, opts{accounts: keyedStore(t), env: []string{"ROTA_LOG_FILE=" + path}})
 	if !strings.Contains(s.stderr.String(), "serving on") {
@@ -158,7 +155,7 @@ func TestLogFile_HasNoEnvironmentVariable(t *testing.T) {
 // could be a credential, is left as it was — and a FIFO is never waited on.
 // Each refusal is said on stderr, the server having nowhere else yet.
 func TestLogFile_RefusesAPathThatIsNotAPlainFileOfItsOwn(t *testing.T) {
-	gateRelease(t, "1.4.0-beta.3")
+	since(t, "1.4.0-beta.3")
 	dir := t.TempDir()
 	secret := filepath.Join(dir, "credentials.json")
 	if err := os.WriteFile(secret, []byte(`{"secret":"kept"}`), 0o600); err != nil {
@@ -206,7 +203,7 @@ func TestLogFile_RefusesAPathThatIsNotAPlainFileOfItsOwn(t *testing.T) {
 // into the log, and to the terminal as well, because nobody is reading a
 // log of a server that never started.
 func TestLogFile_AServerThatCannotStartSaysWhyOnStderr(t *testing.T) {
-	gateRelease(t, "1.4.0-beta.3")
+	since(t, "1.4.0-beta.3")
 	taken, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
@@ -228,7 +225,7 @@ func TestLogFile_AServerThatCannotStartSaysWhyOnStderr(t *testing.T) {
 // 20 MiB moves to <name>.1, every older one moves up, and the oldest of
 // four goes. The new file is its owner's alone like the first.
 func TestLogFile_RotatesAtTwentyMiBKeepingFour(t *testing.T) {
-	gateRelease(t, "1.4.0-beta.3")
+	since(t, "1.4.0-beta.3")
 	path := filepath.Join(t.TempDir(), "rota.log")
 	full := fullLog(t, path)
 	for i := 1; i <= 4; i++ {
@@ -262,7 +259,7 @@ func TestLogFile_RotatesAtTwentyMiBKeepingFour(t *testing.T) {
 // the chain as the newest old files, the .folding one the older of the
 // two, and nothing is written over.
 func TestLogFile_ALeftoverFoldJoinsTheChain(t *testing.T) {
-	gateRelease(t, "1.4.0-beta.3")
+	since(t, "1.4.0-beta.3")
 	path := filepath.Join(t.TempDir(), "rota.log")
 	for suffix, body := range map[string]string{".0": "left at .0\n", ".folding": "left folding\n", ".1": "old 1\n"} {
 		if err := os.WriteFile(path+suffix, []byte(body), 0o600); err != nil {
@@ -287,7 +284,7 @@ func TestLogFile_ALeftoverFoldJoinsTheChain(t *testing.T) {
 // directory that refuses renames the log cannot move, so no older file is
 // shifted or dropped and the log goes on growing.
 func TestLogFile_ARotationThatCannotMoveTouchesNothingOlder(t *testing.T) {
-	gateRelease(t, "1.4.0-beta.3")
+	since(t, "1.4.0-beta.3")
 	if os.Geteuid() == 0 {
 		t.Skip("root renames in a directory nobody may write")
 	}
@@ -329,7 +326,7 @@ func TestLogFile_ARotationThatCannotMoveTouchesNothingOlder(t *testing.T) {
 // which say what the check has always looked at: writable counts as well as
 // readable.
 func TestConfig_AFileOnlyItsOwnerMayUseIsRefusedInOneSentence(t *testing.T) {
-	gateRelease(t, "1.4.0-beta.3")
+	since(t, "1.4.0-beta.3")
 	home := t.TempDir()
 	config := filepath.Join(home, "server.toml")
 	if err := os.WriteFile(config, []byte("[server]\nquiet = true\n"), 0o600); err != nil {
@@ -370,7 +367,7 @@ func TestConfig_AFileOnlyItsOwnerMayUseIsRefusedInOneSentence(t *testing.T) {
 // now, and the answer says what rota cannot know about it. It never makes
 // an account, goes only on a claude.ai login, and is never repeated.
 func TestLogin_ASetupTokenGoesOnTheAccountNamed(t *testing.T) {
-	gateRelease(t, "1.4.0-beta.1")
+	since(t, "1.4.0-beta.1")
 	s := start(t, opts{accounts: keyedStore(t)})
 	resp, raw := s.do("POST", "/v1/login", `{"account":2,"token":"`+pastedSetup+`"}`)
 	doc := object(t, raw)
@@ -410,7 +407,7 @@ func TestLogin_ASetupTokenGoesOnTheAccountNamed(t *testing.T) {
 // asked the key is taken with a warning. The same key again is the same
 // account.
 func TestLogin_AKeyMakesAnAccountOutOfTheRotation(t *testing.T) {
-	gateRelease(t, "1.4.0-beta.1")
+	since(t, "1.4.0-beta.1")
 	proxy, connects := refusingProxy(t)
 	s := start(t, opts{accounts: keyedStore(t), env: []string{"HTTPS_PROXY=" + proxy}})
 
@@ -475,7 +472,7 @@ func TestLogin_AKeyMakesAnAccountOutOfTheRotation(t *testing.T) {
 // "credential":"apikey" for an account on a key, and "name" when it has
 // one; an ordinary account is rendered as it was.
 func TestAccounts_AKeyAccountSaysSoAndNeverShowsItsKey(t *testing.T) {
-	gateRelease(t, "1.4.0-beta.1")
+	since(t, "1.4.0-beta.1")
 	s := start(t, opts{accounts: keyedStore(t)})
 	resp, raw := s.do("GET", "/v1/accounts", "")
 	if resp.StatusCode != 200 {
@@ -512,7 +509,7 @@ func TestAccounts_AKeyAccountSaysSoAndNeverShowsItsKey(t *testing.T) {
 // not repeated. An account on a key takes no Remote Control, which Claude
 // Code refuses for keys.
 func TestPatchAccount_AKeyIsNeverTakenAsADirectory(t *testing.T) {
-	gateRelease(t, "1.4.0-beta.1")
+	since(t, "1.4.0-beta.1")
 	s := start(t, opts{accounts: keyedStore(t)})
 	for _, field := range []string{"cwd", "config_dir", "sessions"} {
 		resp, raw := s.do("PATCH", "/v1/accounts/2", `{"`+field+`":"/srv/`+pastedKey+`"}`)
@@ -536,26 +533,33 @@ func TestPatchAccount_AKeyIsNeverTakenAsADirectory(t *testing.T) {
 // directory, or the credential's own flag — a key typed there is refused
 // without being repeated, and nothing is stored.
 func TestCommandLine_AKeyAsAnArgumentIsNeverRepeated(t *testing.T) {
-	gateRelease(t, "1.4.0-beta.1")
+	since(t, "1.4.0-beta.1")
 	home := storeDir(t, keyedStore(t))
 	before, _ := os.ReadFile(filepath.Join(home, "accounts.json"))
-	for _, argv := range [][]string{
-		{"login", pastedKey},
-		{pastedKey},
-		{"login", "--key=" + pastedKey},
-		{"login", "--key", pastedKey},
-		{"login", "2", "--token", pastedSetup},
-		{"login", "--token=" + pastedSetup},
-		{"set", pastedKey, "--order", "1"},
-		{"set", "2", "--cwd", "/srv/" + pastedKey},
-		{"run", pastedKey},
-		{"run", "1", pastedKey},
-		{"send", pastedKey, "hello there"},
-		{"serve", "--timeout", pastedKey},
+	const (
+		asKey  = "looks like a key"
+		asFlag = "takes nothing on the command line"
+	)
+	for _, c := range []struct {
+		argv []string
+		says string
+	}{
+		{[]string{"login", pastedKey}, asKey},
+		{[]string{pastedKey}, asKey},
+		{[]string{"login", "--key=" + pastedKey}, asFlag},
+		{[]string{"login", "--key", pastedKey}, asFlag},
+		{[]string{"login", "2", "--token", pastedSetup}, "usage: rota login <account-id> --token"},
+		{[]string{"login", "--token=" + pastedSetup}, asFlag},
+		{[]string{"set", pastedKey, "--order", "1"}, asKey},
+		{[]string{"set", "2", "--cwd", "/srv/" + pastedKey}, asKey},
+		{[]string{"run", pastedKey}, asKey},
+		{[]string{"run", "1", pastedKey}, asKey},
+		{[]string{"send", pastedKey, "hello there"}, asKey},
+		{[]string{"serve", "--timeout", pastedKey}, asKey},
 	} {
-		stdout, stderr, code := runRota(t, home, "", nil, argv...)
-		if code == 0 || stillSecret(stdout+stderr) {
-			t.Fatalf("rota %s: %d\n%s%s", strings.ReplaceAll(strings.Join(argv, " "), "SUITEONLY", "…"), code, stdout, stderr)
+		stdout, stderr, code := runRota(t, home, "", nil, c.argv...)
+		if code == 0 || !strings.Contains(stderr, c.says) || stillSecret(stdout+stderr) {
+			t.Fatalf("rota %s: %d, want it refused with %q\n%s%s", strings.ReplaceAll(strings.Join(c.argv, " "), "SUITEONLY", "…"), code, c.says, stdout, stderr)
 		}
 	}
 	if after, _ := os.ReadFile(filepath.Join(home, "accounts.json")); string(after) != string(before) {
@@ -568,7 +572,7 @@ func TestCommandLine_AKeyAsAnArgumentIsNeverRepeated(t *testing.T) {
 // out of the rotation, shown by its label or the key's last four. The API
 // that cannot be asked is a warning. The key appears nowhere it prints.
 func TestLoginKey_ReadsTheKeyFromStandardInput(t *testing.T) {
-	gateRelease(t, "1.4.0-beta.1")
+	since(t, "1.4.0-beta.1")
 	proxy, connects := refusingProxy(t)
 	home := storeDir(t, keyedStore(t))
 	env := []string{"HTTPS_PROXY=" + proxy}
@@ -611,7 +615,7 @@ func TestLoginKey_ReadsTheKeyFromStandardInput(t *testing.T) {
 // token, says what rota cannot know about it, and takes it only for a
 // claude.ai login.
 func TestLoginToken_ReadsASetupTokenFromStandardInput(t *testing.T) {
-	gateRelease(t, "1.4.0-beta.1")
+	since(t, "1.4.0-beta.1")
 	home := storeDir(t, keyedStore(t))
 	stdout, stderr, code := runRota(t, home, pastedSetup+"\n", nil, "login", "2", "--token")
 	if code != 0 || !strings.Contains(stdout, "long-lived token stored for #2") ||
@@ -695,9 +699,10 @@ func storedAccount(t *testing.T, home string, id int) map[string]json.RawMessage
 	return nil
 }
 
-// runRota runs the binary under test to completion with a private HOME and
-// the given ROTA_HOME, stdin and extra environment, and fails the test if
-// it has not finished within twenty seconds — a FIFO waited on, say.
+// runRota runs the binary under test to completion in a directory of its
+// own, offline, with a private HOME and the given ROTA_HOME, stdin and extra
+// environment, and fails the test if it has not finished within twenty
+// seconds — a FIFO waited on, say.
 func runRota(t *testing.T, home, stdin string, env []string, args ...string) (stdout, stderr string, code int) {
 	t.Helper()
 	if buildErr != nil {
@@ -706,10 +711,12 @@ func runRota(t *testing.T, home, stdin string, env []string, args ...string) (st
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, rotaBin, args...)
-	cmd.Env = append([]string{"PATH=/usr/bin:/bin", "HOME=" + t.TempDir(), "ROTA_HOME=" + home}, env...)
+	cmd.Dir = t.TempDir()
+	cmd.Env = []string{"PATH=/usr/bin:/bin", "HOME=" + t.TempDir(), "ROTA_HOME=" + home}
 	if tmp := os.Getenv("TMPDIR"); tmp != "" {
 		cmd.Env = append(cmd.Env, "TMPDIR="+tmp)
 	}
+	cmd.Env = append(append(cmd.Env, offline()...), env...)
 	cmd.Stdin = strings.NewReader(stdin)
 	var out, errOut strings.Builder
 	cmd.Stdout, cmd.Stderr = &out, &errOut
@@ -728,40 +735,17 @@ func runRota(t *testing.T, home, stdin string, env []string, args ...string) (st
 	return out.String(), errOut.String(), code
 }
 
-// refusingProxy is an HTTPS proxy on the loopback address that answers every
-// CONNECT with 502, so a request through it fails at once without anything
-// leaving this machine. connects is every request line it was sent.
+// refusingProxy is a proxy of this test's own that refuses every request,
+// for the tests that count what the program asked: connects is every
+// request line it was sent.
 func refusingProxy(t *testing.T) (url string, connects func() []string) {
 	t.Helper()
-	l, err := net.Listen("tcp", "127.0.0.1:0")
+	l, url, connects, err := refusing()
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { l.Close() })
-	var mu sync.Mutex
-	var seen []string
-	go func() {
-		for {
-			c, err := l.Accept()
-			if err != nil {
-				return
-			}
-			go func() {
-				defer c.Close()
-				c.SetDeadline(time.Now().Add(5 * time.Second))
-				line, _ := bufio.NewReader(c).ReadString('\n')
-				mu.Lock()
-				seen = append(seen, strings.TrimSpace(line))
-				mu.Unlock()
-				io.WriteString(c, "HTTP/1.1 502 Bad Gateway\r\nContent-Length: 0\r\n\r\n")
-			}()
-		}
-	}()
-	return "http://" + l.Addr().String(), func() []string {
-		mu.Lock()
-		defer mu.Unlock()
-		return append([]string(nil), seen...)
-	}
+	return url, connects
 }
 
 // fullLog makes path a log of exactly 20 MiB, its owner's alone, so the
@@ -793,103 +777,5 @@ func waitForLog(t *testing.T, path, want string) string {
 			t.Fatalf("%s never said %q:\n%s", path, want, raw)
 		}
 		time.Sleep(20 * time.Millisecond)
-	}
-}
-
-// gateRelease skips a test of something the binary under test predates,
-// reading pre-releases as releases do: 1.4.0-beta.2 comes before
-// 1.4.0-beta.3, which comes before 1.4.0. The package's own since reads
-// "1.4.0-beta.3" as later than "1.4.0" and would skip these once 1.4.0 is
-// out, so they gate here instead.
-func gateRelease(t *testing.T, version string) {
-	t.Helper()
-	if buildErr != nil {
-		t.Skip(buildErr)
-	}
-	if releaseBefore(binVersion, version) {
-		t.Skipf("rota %s predates %s, which this pins", binVersion, version)
-	}
-}
-
-// releaseBefore reports whether version a comes before b by semantic
-// versioning: the numbers first, then a release after any pre-release of
-// it, then the pre-release's dotted parts, numbers by value and below
-// words.
-func releaseBefore(a, b string) bool {
-	an, ap := splitRelease(a)
-	bn, bp := splitRelease(b)
-	for i := range max(len(an), len(bn)) {
-		var x, y int
-		if i < len(an) {
-			x = an[i]
-		}
-		if i < len(bn) {
-			y = bn[i]
-		}
-		if x != y {
-			return x < y
-		}
-	}
-	switch {
-	case ap == "" || ap == bp:
-		return false
-	case bp == "":
-		return true
-	}
-	as, bs := strings.Split(ap, "."), strings.Split(bp, ".")
-	for i := range min(len(as), len(bs)) {
-		if as[i] == bs[i] {
-			continue
-		}
-		x, xn := releaseNumber(as[i])
-		y, yn := releaseNumber(bs[i])
-		switch {
-		case xn && yn:
-			return x < y
-		case xn != yn:
-			return xn
-		}
-		return as[i] < bs[i]
-	}
-	return len(as) < len(bs)
-}
-
-// splitRelease is a version's numbers and its pre-release part, without a
-// leading v or any build metadata.
-func splitRelease(v string) ([]int, string) {
-	v, _, _ = strings.Cut(strings.TrimPrefix(v, "v"), "+")
-	core, pre, _ := strings.Cut(v, "-")
-	var nums []int
-	for _, part := range strings.Split(core, ".") {
-		n, _ := releaseNumber(part)
-		nums = append(nums, n)
-	}
-	return nums, pre
-}
-
-// releaseNumber reads a part made of digits alone.
-func releaseNumber(s string) (int, bool) {
-	if s == "" {
-		return 0, false
-	}
-	n := 0
-	for _, r := range s {
-		if r < '0' || r > '9' {
-			return 0, false
-		}
-		n = n*10 + int(r-'0')
-	}
-	return n, true
-}
-
-// TestReleaseBefore_ReadsPreReleasesAsReleasesDo pins the gate itself.
-func TestReleaseBefore_ReadsPreReleasesAsReleasesDo(t *testing.T) {
-	ordered := []string{"1.3.0", "1.3.2", "1.4.0-beta.1", "1.4.0-beta.2", "1.4.0-beta.10", "1.4.0-rc.1", "1.4.0", "v1.4.1", "1.10.0"}
-	for i, a := range ordered {
-		for j, b := range ordered {
-			if got := releaseBefore(a, b); got != (i < j) {
-				t.Fatalf("releaseBefore(%q, %q) = %v", a, b, got)
-			}
-		}
 	}
 }

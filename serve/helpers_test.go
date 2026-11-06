@@ -1,6 +1,7 @@
 package serve_test
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -140,6 +141,54 @@ const token = "test-token"
 // something before it will shut down, which is what the cleanup waits on.
 var client = &http.Client{Transport: &http.Transport{DisableKeepAlives: true}}
 
+// offline is the environment every rota this package runs starts with,
+// before anything a test adds: a proxy on the loopback address that refuses
+// every request, so nothing the program tries to reach — a pasted key's
+// check against the API, say — ever leaves this machine, even when the
+// program does what a test says it must not. A test that wants to see what
+// was asked passes a proxy of its own, which comes later and so wins.
+var offline = sync.OnceValue(func() []string {
+	_, url, _, err := refusing()
+	if err != nil {
+		panic(err)
+	}
+	return []string{"HTTPS_PROXY=" + url, "HTTP_PROXY=" + url}
+})
+
+// refusing is an HTTP proxy on the loopback address that answers every
+// request with 502, so a request through it fails at once without anything
+// leaving this machine. connects is every request line it was sent.
+func refusing() (l net.Listener, url string, connects func() []string, err error) {
+	l, err = net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		return nil, "", nil, err
+	}
+	var mu sync.Mutex
+	var seen []string
+	go func() {
+		for {
+			c, err := l.Accept()
+			if err != nil {
+				return
+			}
+			go func() {
+				defer c.Close()
+				c.SetDeadline(time.Now().Add(5 * time.Second))
+				line, _ := bufio.NewReader(c).ReadString('\n')
+				mu.Lock()
+				seen = append(seen, strings.TrimSpace(line))
+				mu.Unlock()
+				io.WriteString(c, "HTTP/1.1 502 Bad Gateway\r\nContent-Length: 0\r\n\r\n")
+			}()
+		}
+	}()
+	return l, "http://" + l.Addr().String(), func() []string {
+		mu.Lock()
+		defer mu.Unlock()
+		return append([]string(nil), seen...)
+	}, nil
+}
+
 // seed is the store every test starts from: grok first in the rotation on an
 // API key, claude second on a token that never expires. Claude is metered,
 // so it carries a reading fresh enough that the rotation's refresh skips it
@@ -250,8 +299,9 @@ func start(t *testing.T, o opts) *server {
 	args = append(args, o.args...)
 	cmd := exec.Command(rotaBin, args...)
 	// The child sees only what it needs: the fakes and the shell's own
-	// tools, a private HOME so no real CLI configuration is read, and the
-	// store. Nothing from this process's environment leaks in.
+	// tools, a private HOME so no real CLI configuration is read, the store,
+	// and a proxy that lets nothing out. Nothing from this process's
+	// environment leaks in.
 	cmd.Env = []string{
 		"PATH=" + bin + ":/usr/bin:/bin",
 		"HOME=" + t.TempDir(),
@@ -260,6 +310,7 @@ func start(t *testing.T, o opts) *server {
 	if tmp := os.Getenv("TMPDIR"); tmp != "" {
 		cmd.Env = append(cmd.Env, "TMPDIR="+tmp)
 	}
+	cmd.Env = append(cmd.Env, offline()...)
 	cmd.Env = append(cmd.Env, o.env...)
 	cmd.Stderr = s.stderr
 	if err := cmd.Start(); err != nil {
@@ -317,7 +368,7 @@ func serveOnce(t *testing.T, home string, args ...string) (string, int) {
 		t.Skip(buildErr)
 	}
 	cmd := exec.Command(rotaBin, append([]string{"serve"}, args...)...)
-	cmd.Env = []string{"PATH=/usr/bin:/bin", "HOME=" + t.TempDir(), "ROTA_HOME=" + home}
+	cmd.Env = append([]string{"PATH=/usr/bin:/bin", "HOME=" + t.TempDir(), "ROTA_HOME=" + home}, offline()...)
 	out, err := cmd.CombinedOutput()
 	var exit *exec.ExitError
 	switch {

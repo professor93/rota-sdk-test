@@ -9,13 +9,13 @@ import (
 	"path/filepath"
 	"runtime"
 	"slices"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	rota "github.com/professor93/rota/lib"
 	"rotatest/internal/fake"
+	"rotatest/internal/release"
 )
 
 // at is the instant every test runs at. The refresh accounts expire at 1 ms,
@@ -473,7 +473,7 @@ func TestClaudeStage_HomeKeepsTheLoginWhereThePlatformDoes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	stored := !older(rota.Version, "1.3.0") && runtime.GOOS != "windows" && runtime.GOOS != "darwin"
+	stored := !release.Older(rota.Version, "1.3.0") && runtime.GOOS != "windows" && runtime.GOOS != "darwin"
 	hasHome := slices.Contains(cmd.Env, "CLAUDE_CONFIG_DIR="+home)
 	hasOwn := slices.Contains(cmd.Env, "CLAUDE_CONFIG_DIR=/tmp/x")
 	hasToken := slices.Contains(cmd.Env, "CLAUDE_CODE_OAUTH_TOKEN=A0")
@@ -502,23 +502,4 @@ func TestClaudeStage_DeadIsReauth(t *testing.T) {
 	if !errors.Is(err, rota.ErrReauth) {
 		t.Fatalf("err %v", err)
 	}
-}
-
-// older reports whether a dotted version reads before another, number by
-// number, with a missing number as 0.
-func older(a, b string) bool {
-	as, bs := strings.Split(a, "."), strings.Split(b, ".")
-	for i := 0; i < len(as) || i < len(bs); i++ {
-		var x, y int
-		if i < len(as) {
-			x, _ = strconv.Atoi(as[i])
-		}
-		if i < len(bs) {
-			y, _ = strconv.Atoi(bs[i])
-		}
-		if x != y {
-			return x < y
-		}
-	}
-	return false
 }

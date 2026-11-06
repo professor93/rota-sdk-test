@@ -14,6 +14,17 @@
 | Status | 6 | TestStatus_DeadIsReauth, TestStatus_ScopedWindowNeverLimits, TestStatus_SpentWindowBeforeResetIsLimited, TestStatus_SpentWindowIsLimited, TestStatus_SpentWindowPastResetIsOK, TestStatus_UnderIsOK |
 | String | 1 | TestString_IsProviderSlashLabel |
 
+## rotatest/sdk/apikey
+
+| Symbol | Conditions | Tests |
+|---|---:|---|
+| CheckProject | 1 | TestCheckProject_AKeyAccountTakesNoRemoteControl |
+| Encode | 1 | TestEncode_AKeyAccountKeepsWhatItIs |
+| Label | 1 | TestLabel_AKeyAccountShowsOnlyItsLastFour |
+| Stage | 1 | TestStage_AKeyAccountRunsOnItsKeyAlone |
+| StagePlan | 1 | TestStagePlan_AKeyAccountStagesNoFile |
+| Usage | 1 | TestUsage_AKeyAccountReadsNothing |
+
 ## rotatest/sdk/claude
 
 | Symbol | Conditions | Tests |
@@ -182,6 +193,7 @@
 | DefaultDir | 1 | TestDefaultDir_HonoursROTAHOME |
 | FileBackend | 2 | TestFileBackend_LoadSweepsOldTemp, TestFileBackend_SaveIsAtomic0600 |
 | HideFromAgents | 1 | TestHideFromAgents_DedupesAndHostEnvRecomputes |
+| Maintain | 1 | TestMaintain_APanickingSweepLetsGoOfTheAccount |
 | NewStore | 5 | TestNewStore_CorruptBytes, TestNewStore_EmptyProviderDefaults, TestNewStore_LoadErrorCloses, TestNewStore_LockErrorReturnsNoStore, TestNewStore_NextIDRaisedPastMaxID |
 | Open | 1 | TestOpen_FirstRunIsEmpty |
 | Store | 1 | TestStore_IDsAreNeverReused |
@@ -194,7 +206,7 @@
 | StorePrepare | 2 | TestStorePrepare_LookPathFailureReleasesClaim, TestStorePrepare_ReturnsBinaryEnvAndClaim |
 | StoreRefresh | 5 | TestStoreRefresh_CollectsErrorsNeverFatal, TestStoreRefresh_ForceIgnoresTTL, TestStoreRefresh_PanicInProviderBecomesError, TestStoreRefresh_SavesOnceWhenChanged, TestStoreRefresh_SkipsDeadUnmeteredFreshAndBusy |
 | StoreRemove | 3 | TestStoreRemove_BusyIsErrBusy, TestStoreRemove_DeletesHomeAndRetiresID, TestStoreRemove_UnknownIsNoAccount |
-| StoreRun | 12 | TestStoreRun_AdoptsBeforeRefresh, TestStoreRun_BusyIsErrBusy, TestStoreRun_ChildEnvIsHostEnvWithoutHiddenNames, TestStoreRun_ClaudeConversationsGoWhereTheAccountWasPointed, TestStoreRun_ClaudeKeepingItsConversationsToItselfLinksToNone, TestStoreRun_ClaudeMirrorLeavesARealFileWhereALinkBelongs, TestStoreRun_ClaudeRunsInAMirrorOfTheSharedConfigDirectory, TestStoreRun_ClaudeWithItsOwnConfigDirIsNotMirrored, TestStoreRun_DeadIsReauth, TestStoreRun_ReleasesLockSoSaveRefuses, TestStoreRun_SavesBeforeRun, TestStoreRun_StageErrorStillSaves |
+| StoreRun | 16 | TestStoreRun_AKeyAccountRunsOnItsKeyAlone, TestStoreRun_APanickingLaunchLetsGoOfTheAccount, TestStoreRun_AdoptsBeforeRefresh, TestStoreRun_BusyIsErrBusy, TestStoreRun_ChildEnvIsHostEnvWithoutHiddenNames, TestStoreRun_ClaudeConversationsGoWhereTheAccountWasPointed, TestStoreRun_ClaudeHomeLosesOlderLinksToOrganisationPolicy, TestStoreRun_ClaudeKeepingItsConversationsToItselfLinksToNone, TestStoreRun_ClaudeMirrorLeavesARealFileWhereALinkBelongs, TestStoreRun_ClaudeMirrorLinksNoOrganisationPolicy, TestStoreRun_ClaudeRunsInAMirrorOfTheSharedConfigDirectory, TestStoreRun_ClaudeWithItsOwnConfigDirIsNotMirrored, TestStoreRun_DeadIsReauth, TestStoreRun_ReleasesLockSoSaveRefuses, TestStoreRun_SavesBeforeRun, TestStoreRun_StageErrorStillSaves |
 | StoreSave | 1 | TestStoreSave_AfterReleaseRefuses |
 
 ## rotatest/serve
@@ -205,16 +217,20 @@
 | ARunUsesTheLongTokenWhileItLasts | 1 | TestARunUsesTheLongTokenWhileItLasts |
 | ATerminalSharedFromThisMachineIsListed | 1 | TestATerminalSharedFromThisMachineIsListed |
 | AccountSchema | 2 | TestAccountSchema_DescribesOneAccount, TestAccountSchema_UnknownIdIs404 |
-| Accounts | 3 | TestAccounts_DefaultSkipsAnAccountOutOfTheQueue, TestAccounts_ListedInRotationOrderWithDefault, TestAccounts_ThresholdReadsTheCutoff |
+| Accounts | 4 | TestAccounts_AKeyAccountSaysSoAndNeverShowsItsKey, TestAccounts_DefaultSkipsAnAccountOutOfTheQueue, TestAccounts_ListedInRotationOrderWithDefault, TestAccounts_ThresholdReadsTheCutoff |
 | Auth | 7 | TestAuth_AUserSignsInAndTheCookieWorks, TestAuth_AWatchTokenReadsAndDoesNotRun, TestAuth_AnInviteWorksOnce, TestAuth_HealthAnswersWithThePageOff, TestAuth_OldPathsStillWork, TestAuth_PrintConfigMasksEverySecret, TestAuth_ServeTokenPrintsATokenAndItsDigest |
-| Config | 5 | TestConfig_AFileOthersCanReadIsRefused, TestConfig_AFlagBeatsTheFile, TestConfig_FileGivesTheTokenAndSwitchesThePageOff, TestConfig_PrintConfigSaysWhereEachValueCameFrom, TestConfig_WebSocketOffIsThreeRoutesThatWereNeverThere |
+| CommandLine | 1 | TestCommandLine_AKeyAsAnArgumentIsNeverRepeated |
+| Config | 6 | TestConfig_AFileOnlyItsOwnerMayUseIsRefusedInOneSentence, TestConfig_AFileOthersCanReadIsRefused, TestConfig_AFlagBeatsTheFile, TestConfig_FileGivesTheTokenAndSwitchesThePageOff, TestConfig_PrintConfigSaysWhereEachValueCameFrom, TestConfig_WebSocketOffIsThreeRoutesThatWereNeverThere |
 | DeleteAccount | 2 | TestDeleteAccount_BadIdIs400, TestDeleteAccount_RemovesAndThen404 |
-| Login | 2 | TestLogin_GrokReturnsIdUrlKind, TestLogin_UnknownProviderIs400 |
+| LogFile | 10 | TestLogFile_ALeftoverFoldJoinsTheChain, TestLogFile_ARotationThatCannotMoveTouchesNothingOlder, TestLogFile_AServerThatCannotStartSaysWhyOnStderr, TestLogFile_AppendsToWhatIsThere, TestLogFile_ComesFromTheFileAndAFlagBeatsIt, TestLogFile_HasNoEnvironmentVariable, TestLogFile_QuietStillDecidesHowMuch, TestLogFile_RefusesAPathThatIsNotAPlainFileOfItsOwn, TestLogFile_RotatesAtTwentyMiBKeepingFour, TestLogFile_TheTerminalStaysQuiet |
+| Login | 4 | TestLogin_AKeyMakesAnAccountOutOfTheRotation, TestLogin_ASetupTokenGoesOnTheAccountNamed, TestLogin_GrokReturnsIdUrlKind, TestLogin_UnknownProviderIs400 |
 | LoginCanAskForALongLivedToken | 1 | TestLoginCanAskForALongLivedToken |
 | LoginFinish | 3 | TestLoginFinish_ApiKeyAddsAccount, TestLoginFinish_BadIdIs404, TestLoginFinish_WrongKeyKeepsThePendingLogin |
+| LoginKey | 1 | TestLoginKey_ReadsTheKeyFromStandardInput |
+| LoginToken | 1 | TestLoginToken_ReadsASetupTokenFromStandardInput |
 | NoShareSocketWhenTheFileSaysNo | 1 | TestNoShareSocketWhenTheFileSaysNo |
 | Pages | 3 | TestPages_TheEmulatorIsServedByRotaItself, TestPages_TheSchemaSaysWhichPagesThereAre, TestPages_TheTerminalPageComesWithItsGroup |
-| PatchAccount | 16 | TestPatchAccount_BadOrderIs400, TestPatchAccount_CwdEqualToConfigDirIs400, TestPatchAccount_NothingToChangeIs400, TestPatchAccount_OrderBeforeIdPlacesRelative, TestPatchAccount_OrderFirstShiftsQueue, TestPatchAccount_OrderNumberAsStringIsTheSame, TestPatchAccount_OrderNumberTakesThatPlace, TestPatchAccount_OrderPastTheEndIsLast, TestPatchAccount_OrderUpMovesOnePlace, TestPatchAccount_OrderZeroLeavesTheQueue, TestPatchAccount_ProjectDirsAreStored, TestPatchAccount_RelativeProjectPathIs400, TestPatchAccount_SessionsSaysWhereConversationsLive, TestPatchAccount_ThresholdIsStored, TestPatchAccount_ThresholdOutOfRangeIs400, TestPatchAccount_UnknownIdIs404 |
+| PatchAccount | 17 | TestPatchAccount_AKeyIsNeverTakenAsADirectory, TestPatchAccount_BadOrderIs400, TestPatchAccount_CwdEqualToConfigDirIs400, TestPatchAccount_NothingToChangeIs400, TestPatchAccount_OrderBeforeIdPlacesRelative, TestPatchAccount_OrderFirstShiftsQueue, TestPatchAccount_OrderNumberAsStringIsTheSame, TestPatchAccount_OrderNumberTakesThatPlace, TestPatchAccount_OrderPastTheEndIsLast, TestPatchAccount_OrderUpMovesOnePlace, TestPatchAccount_OrderZeroLeavesTheQueue, TestPatchAccount_ProjectDirsAreStored, TestPatchAccount_RelativeProjectPathIs400, TestPatchAccount_SessionsSaysWhereConversationsLive, TestPatchAccount_ThresholdIsStored, TestPatchAccount_ThresholdOutOfRangeIs400, TestPatchAccount_UnknownIdIs404 |
 | Root | 1 | TestRoot_UnauthenticatedSaysVersion |
 | Run | 31 | TestRun_ByIdReturnsTheResultFields, TestRun_ClaudeReadsTheResultEvent, TestRun_ClaudeRunsInAMirrorOfTheServersConfigDirectory, TestRun_CwdInsideRootRuns, TestRun_CwdOutsideRootIs400, TestRun_DangerousOptionIs403WithoutFlag, TestRun_DangerousOptionRunsWithFlag, TestRun_DeadAccountIs409, TestRun_DoneCarriesTheTotals, TestRun_FailedRunKeepsResultEmpty, TestRun_InputRunIsDescribedAndListed, TestRun_InputRunRefusesWhatItCannot, TestRun_InputRunReplaysOnReattach, TestRun_InputRunTakesMessagesByID, TestRun_MaxConcurrentSerializesRuns, TestRun_MissingPromptIs400, TestRun_NonZeroExitIs502, TestRun_PartialMessagesNeedAStream, TestRun_PartialMessagesStreamDeltasThenTheWhole, TestRun_ReplyIsTheAnswerAloneUnlessAsked, TestRun_RotationPicksTheDefault, TestRun_StreamAcceptsNDJSON, TestRun_StreamIsServerSentEvents, TestRun_StreamedTextCarriesBlocksOnlyWithWith, TestRun_TimeoutIs504, TestRun_ToolEventCarriesTheToolsInput, TestRun_UnknownAccountIs404, TestRun_UnknownFieldIs400, TestRun_UnknownReadingIs400, TestRun_UsageEventCarriesTheMessagesNumbers, TestRun_WithNamesTheReadings |
 | Schema | 1 | TestSchema_DescribesEveryProvider |
@@ -223,6 +239,12 @@
 | TheShareSocketIsTheOwnersAlone | 1 | TestTheShareSocketIsTheOwnersAlone |
 | V1 | 3 | TestV1_NeedsBearer, TestV1_TenBadTokensBlockTheAddress, TestV1_WrongTokenIs401 |
 | WS | 4 | TestWS_ABadStartIsRefused, TestWS_AttachesToARunStartedOverHTTP, TestWS_AuthIsCheckedBeforeTheUpgrade, TestWS_StartsARunAndCarriesItBothWays |
+
+## rotatest/module
+
+| Symbol | Conditions | Tests |
+|---|---:|---|
+| Module | 2 | TestModule_TheProgramIsAModuleOfItsOwn, TestModule_TheRootRequiresNothing |
 
 ## rotatest/live
 

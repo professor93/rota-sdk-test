@@ -33,7 +33,7 @@ func serveStdin(t *testing.T, home, in string, args ...string) (string, int) {
 		t.Skip(buildErr)
 	}
 	cmd := exec.Command(rotaBin, append([]string{"serve"}, args...)...)
-	cmd.Env = []string{"PATH=/usr/bin:/bin", "HOME=" + t.TempDir(), "ROTA_HOME=" + home}
+	cmd.Env = append([]string{"PATH=/usr/bin:/bin", "HOME=" + t.TempDir(), "ROTA_HOME=" + home}, offline()...)
 	cmd.Stdin = strings.NewReader(in)
 	// The two streams are kept apart: the block to paste is on standard
 	// output and the advice about it on standard error, which is what makes

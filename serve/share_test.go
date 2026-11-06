@@ -143,6 +143,7 @@ func TestATerminalSharedFromThisMachineIsListed(t *testing.T) {
 	if tmp := os.Getenv("TMPDIR"); tmp != "" {
 		cmd.Env = append(cmd.Env, "TMPDIR="+tmp)
 	}
+	cmd.Env = append(cmd.Env, offline()...)
 	// A process group of its own, so the whole of it can be ended: script
 	// holds the terminal and rota holds the CLI under it.
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
