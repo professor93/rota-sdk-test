@@ -18,6 +18,7 @@ import (
 	"syscall"
 	"testing"
 	"time"
+	"unicode"
 )
 
 // The server binary under test, settled once for the whole package.
@@ -114,10 +115,11 @@ type opts struct {
 	// not answer.
 	ready string
 	// home is the store directory, for the few tests that need one at a
-	// particular path. The default is this test's own temporary directory,
-	// which is where every other test wants it; the exception is the socket
-	// a local terminal is shared through, whose address a temporary
-	// directory named after the test is usually too long for.
+	// particular path, made with storeDir. The default is one inside this
+	// test's own temporary directory, which is where every other test wants
+	// it; the exception is the socket a local terminal is shared through,
+	// whose address a temporary directory named after the test is usually
+	// too long for.
 	home string
 }
 
@@ -188,6 +190,22 @@ done
 `
 }
 
+// storeDir makes a fresh store directory inside dir, under a name that is not
+// plain ASCII. That name is what keeps every test off the macOS keychain: rota
+// keeps no claude login in a home under such a path, because the keychain item
+// Claude Code would keep it in cannot be named, so it runs the account on its
+// token and asks the keychain nothing (docs/reference.md, "Your own login").
+// Under a plain path each claude launch on a Mac would look for an item in the
+// login keychain of whoever runs the tests. Elsewhere it is only a name.
+func storeDir(t *testing.T, dir string) string {
+	t.Helper()
+	home := filepath.Join(dir, "störe")
+	if err := os.Mkdir(home, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	return home
+}
+
 // start runs the pinned binary on a free loopback port with a private
 // ROTA_HOME, the fake CLIs first on the child's PATH, and background refresh
 // off. It returns once GET / answers and stops the process at cleanup.
@@ -198,7 +216,10 @@ func start(t *testing.T, o opts) *server {
 	}
 	home := o.home
 	if home == "" {
-		home = t.TempDir()
+		home = storeDir(t, t.TempDir())
+	}
+	if !strings.ContainsFunc(home, func(r rune) bool { return r > unicode.MaxASCII }) {
+		t.Fatalf("the store %s is a plain ASCII path, which on macOS sends rota to the keychain; make it with storeDir", home)
 	}
 	if o.accounts == "" {
 		o.accounts = seed()

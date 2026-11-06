@@ -35,11 +35,12 @@ func shareSock(home string) string {
 // all the same, and goes with it.
 func shortHome(t *testing.T) string {
 	t.Helper()
-	home, err := os.MkdirTemp("", "rt")
+	dir, err := os.MkdirTemp("", "rt")
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { os.RemoveAll(home) })
+	t.Cleanup(func() { os.RemoveAll(dir) })
+	home := storeDir(t, dir)
 	if len(shareSock(home)) > 100 {
 		t.Skipf("%s is too long for a unix socket address", shareSock(home))
 	}
