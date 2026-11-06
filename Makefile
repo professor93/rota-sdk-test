@@ -20,7 +20,7 @@ login:
 	ROTA_LOGIN=1 go run ./cmd/login
 
 local:
-	go -C ../cswapgo build -o $(CURDIR)/bin/rota ./cmd/rota
+	GOWORK=$(abspath ../cswapgo)/go.work go -C ../cswapgo build -o $(CURDIR)/bin/rota ./cmd/rota
 	ROTA_BIN=$(CURDIR)/bin/rota GOWORK=$(CURDIR)/go.work.local go test -tags local -count=1 ./...
 
 matrix:

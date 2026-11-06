@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -77,16 +78,24 @@ func givenBin(bin string) (string, error) {
 
 // versionOf is what bin's version prints after "rota".
 func versionOf(bin string) (string, error) {
-	out, err := exec.Command(bin, "version").Output()
-	if err != nil {
-		return "", fmt.Errorf("rota version: %v", err)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	var stdout, stderr bytes.Buffer
+	cmd := exec.CommandContext(ctx, bin, "version")
+	cmd.Stdout, cmd.Stderr = &stdout, &stderr
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("rota version: %v: %s", err, strings.TrimSpace(stderr.String()))
 	}
-	f := strings.Fields(string(out))
-	if len(f) != 2 || f[0] != "rota" {
-		return "", fmt.Errorf("rota version printed %q, want \"rota <version>\"", out)
+	m := versionLine.FindStringSubmatch(stdout.String())
+	if m == nil {
+		return "", fmt.Errorf("rota version printed %q, want \"rota <version>\"", stdout.String())
 	}
-	return f[1], nil
+	return m[1], nil
 }
+
+// versionLine is the one line the program's version prints: "rota", a space,
+// a semantic version (with an optional v and pre-release), a newline.
+var versionLine = regexp.MustCompile(`^rota v?(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)\n?$`)
 
 // opts is what a test may vary about its server. Everything unset gets the
 // default the tests share, so most tests pass opts{}.
