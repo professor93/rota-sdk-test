@@ -364,11 +364,19 @@ func start(t *testing.T, o opts) *server {
 // command wrote and the status it ended with.
 func serveOnce(t *testing.T, home string, args ...string) (string, int) {
 	t.Helper()
+	return rotaIn(t, home, nil, append([]string{"serve"}, args...)...)
+}
+
+// rotaIn runs the binary under test to completion with a private HOME, the
+// store in home and a proxy that lets nothing out, and returns everything it
+// wrote and its exit status.
+func rotaIn(t *testing.T, home string, env []string, args ...string) (string, int) {
+	t.Helper()
 	if buildErr != nil {
 		t.Skip(buildErr)
 	}
-	cmd := exec.Command(rotaBin, append([]string{"serve"}, args...)...)
-	cmd.Env = append([]string{"PATH=/usr/bin:/bin", "HOME=" + t.TempDir(), "ROTA_HOME=" + home}, offline()...)
+	cmd := exec.Command(rotaBin, args...)
+	cmd.Env = append(append([]string{"PATH=/usr/bin:/bin", "HOME=" + t.TempDir(), "ROTA_HOME=" + home}, offline()...), env...)
 	out, err := cmd.CombinedOutput()
 	var exit *exec.ExitError
 	switch {
@@ -377,7 +385,7 @@ func serveOnce(t *testing.T, home string, args ...string) (string, int) {
 	case errors.As(err, &exit):
 		return string(out), exit.ExitCode()
 	}
-	t.Fatalf("rota serve %s: %v", strings.Join(args, " "), err)
+	t.Fatalf("rota %s: %v", strings.Join(args, " "), err)
 	return "", 0
 }
 

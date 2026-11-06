@@ -15,6 +15,7 @@ import (
 
 	rota "github.com/professor93/rota/lib"
 	"rotatest/internal/fake"
+	"rotatest/internal/release"
 )
 
 // What 1.3.0, 1.3.1 and 1.3.2 promise a program that keeps a claude
@@ -53,19 +54,11 @@ func loginEntry(access, refresh string, expires, until int64) map[string]any {
 	return l
 }
 
-// releasedBefore skips a case for behaviour the module under test predates.
-func releasedBefore(t *testing.T, version string) {
-	t.Helper()
-	if older(rota.Version, version) {
-		t.Skipf("rota %s predates %s, which this pins", rota.Version, version)
-	}
-}
-
 // A home is where the stored route keeps a login, and a home is all it
 // needs from the account: a refresh token and an expiry, alive. Windows keeps
 // the environment route for claude in every case.
 func TestStoresLogin_ClaudeNeedsAHomeARefreshTokenAndAnExpiry(t *testing.T) {
-	releasedBefore(t, "1.3.0")
+	release.Since(t, rota.Version, "1.3.0")
 	setup(t)
 	home := t.TempDir()
 	stored := runtime.GOOS != "windows"
@@ -96,7 +89,7 @@ func TestStoresLogin_ClaudeNeedsAHomeARefreshTokenAndAnExpiry(t *testing.T) {
 // the login until the application records that it wrote it. It touches no
 // disk.
 func TestStagePlan_ClaudeStoredRoutePlansTheLoginUntilItIsWritten(t *testing.T) {
-	releasedBefore(t, "1.3.0")
+	release.Since(t, rota.Version, "1.3.0")
 	if runtime.GOOS == "windows" {
 		t.Skip("windows keeps the environment route for claude")
 	}
@@ -146,7 +139,7 @@ func TestStagePlan_ClaudeStoredRoutePlansTheLoginUntilItIsWritten(t *testing.T) 
 // account is in: a dead account's home somebody signed in again inside is
 // joined with nothing of the account's handed over.
 func TestJoinHome_ClaudeJoinsWhateverTheHomeHolds(t *testing.T) {
-	releasedBefore(t, "1.3.0")
+	release.Since(t, rota.Version, "1.3.0")
 	setup(t)
 	home := t.TempDir()
 	dead := livingClaude()
@@ -176,7 +169,8 @@ func TestJoinHome_ClaudeJoinsWhateverTheHomeHolds(t *testing.T) {
 // tokens of MCP servers there. A planned login replaces the login entry and
 // nothing else, byte for byte and in place.
 func TestMergeClaudeCredentials_ReplacesOnlyTheLogin(t *testing.T) {
-	releasedBefore(t, "1.3.0")
+	release.Since(t, rota.Version, "1.3.0")
+	setup(t)
 	existing := `{"mcpOAuth":{"srv":{"accessToken":"mcp-secret","expiresAt":1.50}},"claudeAiOauth":{"accessToken":"old"},"zeta":[1, 2]}`
 	staged := `{"claudeAiOauth":{"accessToken":"new","refreshToken":"R1","expiresAt":5}}`
 	got, err := rota.MergeClaudeCredentials([]byte(existing), []byte(staged))
@@ -201,7 +195,8 @@ func TestMergeClaudeCredentials_ReplacesOnlyTheLogin(t *testing.T) {
 // A store holds a login Claude Code can use when it has a refresh token and
 // an expiry; an empty refresh token is how Claude Code gives one up.
 func TestHoldsLogin_ClaudeIsARefreshTokenAndAnExpiry(t *testing.T) {
-	releasedBefore(t, "1.3.0")
+	release.Since(t, rota.Version, "1.3.0")
+	setup(t)
 	a := livingClaude()
 	cases := []struct {
 		name string
@@ -228,7 +223,7 @@ func TestHoldsLogin_ClaudeIsARefreshTokenAndAnExpiry(t *testing.T) {
 // is how a rotation is told from a new login: it is taken with no network
 // call, and the account learns when its login ends.
 func TestAdoptFrom_ClaudeTakesARotationWithoutAskingAnybody(t *testing.T) {
-	releasedBefore(t, "1.3.0")
+	release.Since(t, rota.Version, "1.3.0")
 	s := setup(t)
 	until := atMS + 30*86_400_000
 	a := livingClaude()
@@ -257,7 +252,7 @@ func TestAdoptFrom_ClaudeTakesARotationWithoutAskingAnybody(t *testing.T) {
 // account's tokens exactly as they were and names who the home is signed in
 // as.
 func TestAdoptFrom_ClaudeNewLoginIsAskedAboutBeforeItIsTaken(t *testing.T) {
-	releasedBefore(t, "1.3.0")
+	release.Since(t, rota.Version, "1.3.0")
 	s := setup(t)
 	s.Handle("/profile", func(r *http.Request, _ map[string]any) (int, any) {
 		if r.Header.Get("Authorization") != "Bearer A9" {
@@ -312,7 +307,7 @@ func TestAdoptFrom_ClaudeNewLoginIsAskedAboutBeforeItIsTaken(t *testing.T) {
 // any living login in its home is somebody signing it in again, and taking
 // it brings the account back.
 func TestAdoptFrom_ClaudeDeadAccountSignedInAgainInsideItsHome(t *testing.T) {
-	releasedBefore(t, "1.3.0")
+	release.Since(t, rota.Version, "1.3.0")
 	setup(t)
 	a := livingClaude()
 	a.StagedWritten()
@@ -336,7 +331,7 @@ func TestAdoptFrom_ClaudeDeadAccountSignedInAgainInsideItsHome(t *testing.T) {
 // login that was is dead — and since 1.3.1 says Claude Code did it — while a
 // blanked older login only means the home holds nothing usable.
 func TestAdoptFrom_ClaudeBlankedLogin(t *testing.T) {
-	releasedBefore(t, "1.3.0")
+	release.Since(t, rota.Version, "1.3.0")
 	setup(t)
 	blanked := homeWith(loginEntry("", "", 0, 0), map[string]any{"mcpOAuth": map[string]any{"srv": map[string]any{"accessToken": "m"}}})
 
@@ -348,7 +343,7 @@ func TestAdoptFrom_ClaudeBlankedLogin(t *testing.T) {
 	if !a.Dead {
 		t.Fatal("the account's current login blanked: dead")
 	}
-	if !older(rota.Version, "1.3.1") && !strings.Contains(a.DeadReason, "Claude Code cleared the login") {
+	if !release.Older(rota.Version, "1.3.1") && !strings.Contains(a.DeadReason, "Claude Code cleared the login") {
 		t.Fatalf("and says why: %q", a.DeadReason)
 	}
 
@@ -367,7 +362,7 @@ func TestAdoptFrom_ClaudeBlankedLogin(t *testing.T) {
 // A store that is there and cannot be read may be Claude Code halfway
 // through writing it: nothing changes, and the error says so.
 func TestAdoptFrom_ClaudeUnreadableStoreChangesNothing(t *testing.T) {
-	releasedBefore(t, "1.3.0")
+	release.Since(t, rota.Version, "1.3.0")
 	setup(t)
 	a := livingClaude()
 	a.StagedWritten()
@@ -387,7 +382,7 @@ func TestAdoptFrom_ClaudeUnreadableStoreChangesNothing(t *testing.T) {
 // holds. That is the one login that may be written over while something runs
 // there.
 func TestClaudeHomeSpent_TheWrittenLoginRefreshedAway(t *testing.T) {
-	releasedBefore(t, "1.3.0")
+	release.Since(t, rota.Version, "1.3.0")
 	s := setup(t)
 	s.Handle("/token", func(*http.Request, map[string]any) (int, any) {
 		return 200, fake.ClaudeToken("A1", "R1", 3600, "", "", "")
@@ -416,16 +411,19 @@ func TestClaudeHomeSpent_TheWrittenLoginRefreshedAway(t *testing.T) {
 	}
 }
 
-// Since 1.3.1 these no longer reach a claude account's CLI on any route: each
-// would change how it signs in, stop it reading its login at all, or tell it
-// that it runs inside Claude Code.
+// These no longer reach a claude account's CLI on any route: each would
+// change how it signs in, stop it reading its login at all, or tell it that
+// it runs inside Claude Code. 1.3.1 dropped the first six, 1.3.2 the
+// federation variables and CLAUDECODE.
 func TestEnviron_ClaudeDropsWhatWouldChangeHowItSignsIn(t *testing.T) {
-	releasedBefore(t, "1.3.1")
+	release.Since(t, rota.Version, "1.3.1")
 	setup(t)
 	vars := []string{
 		"CLAUDE_CODE_SIMPLE", "ANTHROPIC_PROFILE", "CLAUDE_CODE_USE_FOUNDRY", "CLAUDE_CODE_USE_MANTLE",
-		"CLAUDE_CODE_USE_ANTHROPIC_AWS", "CLAUDE_CODE_OAUTH_REFRESH_TOKEN", "ANTHROPIC_FEDERATION_RULE_ID",
-		"ANTHROPIC_ORGANIZATION_ID", "CLAUDECODE",
+		"CLAUDE_CODE_USE_ANTHROPIC_AWS", "CLAUDE_CODE_OAUTH_REFRESH_TOKEN",
+	}
+	if !release.Older(rota.Version, "1.3.2") {
+		vars = append(vars, "ANTHROPIC_FEDERATION_RULE_ID", "ANTHROPIC_ORGANIZATION_ID", "CLAUDECODE")
 	}
 	inherited := []string{"PATH=/usr/bin:/bin", "KEEP=me"}
 	for i, v := range vars {
@@ -470,7 +468,7 @@ func TestEnviron_ClaudeDropsWhatWouldChangeHowItSignsIn(t *testing.T) {
 // which the credential store then says as Claude Code would. A profile that
 // cannot be read never fails a login.
 func TestClaudeComplete_ReadsThePlanOnceAndNeverFailsOnIt(t *testing.T) {
-	releasedBefore(t, "1.3.0")
+	release.Since(t, rota.Version, "1.3.0")
 	s := setup(t)
 	s.Handle("/token", reply(200, fake.ClaudeToken("A1", "R1", 3600, "u1", "c@x", "o1")))
 	s.Handle("/profile", reply(200, fake.Reply{

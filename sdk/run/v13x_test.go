@@ -6,13 +6,13 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	rota "github.com/professor93/rota/lib"
 	"rotatest/internal/fake"
+	"rotatest/internal/release"
 )
 
 // Since 1.3.1 a CLI is asked to stop before it is killed: on Linux and macOS
@@ -28,9 +28,7 @@ func stopsAsked(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("windows is unchanged: the CLI is killed")
 	}
-	if releasedBefore(rota.Version, "1.3.1") {
-		t.Skipf("rota %s predates 1.3.1, which this pins", rota.Version)
-	}
+	release.Since(t, rota.Version, "1.3.1")
 }
 
 // A CLI that handles SIGTERM finishes and exits with its own status, and the
@@ -105,7 +103,8 @@ wait
 
 // A run rota stopped for a bound returns what 1.3.0 returned — no error,
 // exit code -1 and is_error — whatever the CLI exits with once asked.
-// Claude Code handles SIGTERM itself, so exiting 0 is the common case.
+// Claude Code handles SIGTERM itself, so exiting 0 is the common case. 1.3.1
+// alone returned the CLI's own status, and 1.3.2 put this back.
 func TestRun_ABoundHitIsMinusOneWhateverTheCLIExitsWith(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("the CLI is a shell script")
@@ -161,25 +160,6 @@ func cancelledAt(ctx context.Context) time.Time {
 	return time.Now()
 }
 
-// releasedBefore reports whether a dotted version reads before another,
-// number by number, with a missing or non-numeric part as 0.
-func releasedBefore(a, b string) bool {
-	as, bs := strings.Split(strings.TrimPrefix(a, "v"), "."), strings.Split(strings.TrimPrefix(b, "v"), ".")
-	for i := range max(len(as), len(bs)) {
-		var x, y int
-		if i < len(as) {
-			x, _ = strconv.Atoi(as[i])
-		}
-		if i < len(bs) {
-			y, _ = strconv.Atoi(bs[i])
-		}
-		if x != y {
-			return x < y
-		}
-	}
-	return false
-}
-
 // failingWriter refuses every event, as a client that went away does.
 type failingWriter struct{}
 
@@ -187,9 +167,12 @@ func (failingWriter) Write([]byte) (int, error) { return 0, errors.New("the read
 
 // An events writer that fails while the CLI runs stops the run the way a
 // bound does: no error, exit code -1 and is_error, whatever the CLI exits
-// with once asked. A CLI that stops when asked costs no grace.
+// with once asked. A CLI that stops when asked costs no grace. 1.3.1 alone
+// returned the writer's error instead, and 1.3.2 put this back.
 func TestRun_AFailedEventsWriterIsMinusOneWhateverTheCLIExitsWith(t *testing.T) {
-	stopsAsked(t)
+	if runtime.GOOS == "windows" {
+		t.Skip("the CLI is a shell script")
+	}
 	a := register(fake.Claude(cli(t, `trap 'exit 0' TERM
 cat >/dev/null
 printf '{"type":"system","subtype":"init","session_id":"s"}\n'

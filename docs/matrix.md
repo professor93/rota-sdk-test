@@ -5,8 +5,10 @@
 | Symbol | Conditions | Tests |
 |---|---:|---|
 | CheckProject | 5 | TestCheckProject_DifferentAbsoluteOK, TestCheckProject_EmptyOK, TestCheckProject_RelativeConfigDirRefused, TestCheckProject_RelativeCwdRefused, TestCheckProject_SameDirRefused |
+| Describe | 2 | TestDescribe_ADeadAccountAlwaysSaysWhy, TestDescribe_LoginUntilAndRemoteControl |
 | FindID | 1 | TestFindID_FindsOrNil |
 | Label | 1 | TestLabel_EmailThenUUIDThenID |
+| LoginNote | 1 | TestLoginNote_SaysSoInTheLastFiveDays |
 | MatchIdentity | 5 | TestMatchIdentity_EmailWhenNoUUID, TestMatchIdentity_NeitherMatchesNothing, TestMatchIdentity_NilIdentityMatchesNothing, TestMatchIdentity_OnlySameProvider, TestMatchIdentity_UUIDWinsOverEmail |
 | NewAccount | 1 | TestNewAccount_AppliesTokenAndMarksStaged |
 | Percent | 4 | TestPercent_IgnoresScoped, TestPercent_MaxOfUnscopedWindows, TestPercent_NeverNegative, TestPercent_NilQuotaZero |
@@ -29,13 +31,21 @@
 
 | Symbol | Conditions | Tests |
 |---|---:|---|
+| AdoptFrom | 5 | TestAdoptFrom_ClaudeBlankedLogin, TestAdoptFrom_ClaudeDeadAccountSignedInAgainInsideItsHome, TestAdoptFrom_ClaudeNewLoginIsAskedAboutBeforeItIsTaken, TestAdoptFrom_ClaudeTakesARotationWithoutAskingAnybody, TestAdoptFrom_ClaudeUnreadableStoreChangesNothing |
 | ClaudeBegin | 1 | TestClaudeBegin_URLIsAuthorizeWithPKCE |
-| ClaudeComplete | 10 | TestClaudeComplete_AuthorizationPendingIsSentinel, TestClaudeComplete_CodeWithStateSuffixIsSplit, TestClaudeComplete_ExchangesCodeWithVerifier, TestClaudeComplete_ExpiredAndDeniedAreOAuthErrors, TestClaudeComplete_FallsBackToProfileForIdentity, TestClaudeComplete_InvalidGrantOnCodeIsOAuthError, TestClaudeComplete_MalformedJSONFails, TestClaudeComplete_ProfileWithoutUUIDLeavesIdentityEmpty, TestClaudeComplete_ReplyWithoutAccessTokenFails, TestClaudeComplete_ServerErrorIsHTTPError |
+| ClaudeComplete | 11 | TestClaudeComplete_AuthorizationPendingIsSentinel, TestClaudeComplete_CodeWithStateSuffixIsSplit, TestClaudeComplete_ExchangesCodeWithVerifier, TestClaudeComplete_ExpiredAndDeniedAreOAuthErrors, TestClaudeComplete_FallsBackToProfileForIdentity, TestClaudeComplete_InvalidGrantOnCodeIsOAuthError, TestClaudeComplete_MalformedJSONFails, TestClaudeComplete_ProfileWithoutUUIDLeavesIdentityEmpty, TestClaudeComplete_ReadsThePlanOnceAndNeverFailsOnIt, TestClaudeComplete_ReplyWithoutAccessTokenFails, TestClaudeComplete_ServerErrorIsHTTPError |
+| ClaudeHomeSpent | 1 | TestClaudeHomeSpent_TheWrittenLoginRefreshedAway |
 | ClaudeLaunch | 2 | TestClaudeLaunch_EnvAndDrops, TestClaudeLaunch_IdentityVariables |
 | ClaudeRefresh | 6 | TestClaudeRefresh_HonoursContextDeadline, TestClaudeRefresh_InvalidGrantKillsLineage, TestClaudeRefresh_NewRefreshTokenReplacesOld, TestClaudeRefresh_RotatesAccessKeepsRefreshWhenAbsent, TestClaudeRefresh_ScavengesCodeFromObjectShapedError, TestClaudeRefresh_TransientFailureLeavesAccountAlone |
 | ClaudeStage | 3 | TestClaudeStage_DeadIsReauth, TestClaudeStage_HomeKeepsTheLoginWhereThePlatformDoes, TestClaudeStage_NoHomeUsesTheAccountsConfigDir |
 | ClaudeStagePlan | 1 | TestClaudeStagePlan_NoFiles |
 | ClaudeUsage | 4 | TestClaudeUsage_ErrorStatusIsHTTPError, TestClaudeUsage_OversizeReplyIsRefused, TestClaudeUsage_ParsesWindowsNoteAndExtra, TestClaudeUsage_SendsBetaHeaderAndBearer |
+| Environ | 1 | TestEnviron_ClaudeDropsWhatWouldChangeHowItSignsIn |
+| HoldsLogin | 1 | TestHoldsLogin_ClaudeIsARefreshTokenAndAnExpiry |
+| JoinHome | 1 | TestJoinHome_ClaudeJoinsWhateverTheHomeHolds |
+| MergeClaudeCredentials | 1 | TestMergeClaudeCredentials_ReplacesOnlyTheLogin |
+| StagePlan | 1 | TestStagePlan_ClaudeStoredRoutePlansTheLoginUntilItIsWritten |
+| StoresLogin | 1 | TestStoresLogin_ClaudeNeedsAHomeARefreshTokenAndAnExpiry |
 
 ## rotatest/sdk/codex
 
@@ -129,7 +139,7 @@
 
 | Symbol | Conditions | Tests |
 |---|---:|---|
-| Run | 24 | TestRun_BufferedArrayOutputIsParsed, TestRun_CodexEventStream, TestRun_ContextCancelKills, TestRun_CwdIsSymlinkResolved, TestRun_DefaultLimitsLeaveSmallOutputAlone, TestRun_GrokBufferedShape, TestRun_HermeticSetsTempConfigDirAndRemovesIt, TestRun_KimiProseBecomesResult, TestRun_MaxBufferedOutputTruncates, TestRun_MaxEventLineTruncates, TestRun_MaxEventsTruncates, TestRun_MaxStderrKeepsTheTail, TestRun_MissingBinaryIsUnsupported, TestRun_NilCommandNeedsBaseEnv, TestRun_NonZeroExitIsAResultNotAnError, TestRun_PromptOnStdinArgvVisibleFieldsFilled, TestRun_ResumeLastBecomesContinue, TestRun_ScratchFilesAreRemoved, TestRun_SignInCheckerConsulted, TestRun_SpacedJSONStillParsed, TestRun_StreamingEventsIncludedOnlyWhenAsked, TestRun_StructuredOutputCaptured, TestRun_SuppliedCommandRunsWithOnlyItsEnv, TestRun_TimeoutKillsAndReturnsResult |
+| Run | 29 | TestRun_ABoundHitIsMinusOneWhateverTheCLIExitsWith, TestRun_ACLIThatIgnoresTheAskIsKilledAfterTheGrace, TestRun_AFailedEventsWriterIsMinusOneWhateverTheCLIExitsWith, TestRun_BufferedArrayOutputIsParsed, TestRun_CodexEventStream, TestRun_ContextCancelKills, TestRun_CwdIsSymlinkResolved, TestRun_DefaultLimitsLeaveSmallOutputAlone, TestRun_GrokBufferedShape, TestRun_HelpersInTheCLIsGroupAreAskedToo, TestRun_HermeticSetsTempConfigDirAndRemovesIt, TestRun_KimiProseBecomesResult, TestRun_MaxBufferedOutputTruncates, TestRun_MaxEventLineTruncates, TestRun_MaxEventsTruncates, TestRun_MaxStderrKeepsTheTail, TestRun_MissingBinaryIsUnsupported, TestRun_NilCommandNeedsBaseEnv, TestRun_NonZeroExitIsAResultNotAnError, TestRun_PromptOnStdinArgvVisibleFieldsFilled, TestRun_ResumeLastBecomesContinue, TestRun_ScratchFilesAreRemoved, TestRun_SignInCheckerConsulted, TestRun_SpacedJSONStillParsed, TestRun_StreamingEventsIncludedOnlyWhenAsked, TestRun_StructuredOutputCaptured, TestRun_SuppliedCommandRunsWithOnlyItsEnv, TestRun_TimeoutAsksTheCLIToStopAndKeepsItsExitCode, TestRun_TimeoutKillsAndReturnsResult |
 
 ## rotatest/sdk/session
 
@@ -190,24 +200,33 @@
 
 | Symbol | Conditions | Tests |
 |---|---:|---|
+| AccountWhyDead | 1 | TestAccountWhyDead_SaysWhyOrThatNobodyKeptIt |
 | DefaultDir | 1 | TestDefaultDir_HonoursROTAHOME |
 | FileBackend | 2 | TestFileBackend_LoadSweepsOldTemp, TestFileBackend_SaveIsAtomic0600 |
 | HideFromAgents | 1 | TestHideFromAgents_DedupesAndHostEnvRecomputes |
 | Maintain | 1 | TestMaintain_APanickingSweepLetsGoOfTheAccount |
 | NewStore | 5 | TestNewStore_CorruptBytes, TestNewStore_EmptyProviderDefaults, TestNewStore_LoadErrorCloses, TestNewStore_LockErrorReturnsNoStore, TestNewStore_NextIDRaisedPastMaxID |
 | Open | 1 | TestOpen_FirstRunIsEmpty |
+| PersonalClaudeDir | 1 | TestPersonalClaudeDir_ROTACLAUDEHOMEIsTheAnswer |
 | Store | 1 | TestStore_IDsAreNeverReused |
 | StoreBeginLogin | 3 | TestStoreBeginLogin_ParksPendingJSON0600, TestStoreBeginLogin_SecondStoreOnSameHomeCanFinish, TestStoreBeginLogin_UnknownProviderParksNothing |
+| StoreCheckHome | 1 | TestStoreCheckHome_RefusesAnotherAccountsHomeUnderAnySpelling |
 | StoreClose | 1 | TestStoreClose_Idempotent |
 | StoreFinishLogin | 7 | TestStoreFinishLogin_AuthPendingKeepsPending, TestStoreFinishLogin_ExpiredPendingIsNoLogin, TestStoreFinishLogin_MatchUpdatesInPlace, TestStoreFinishLogin_NoMatchAddsFreshIDAndWipesStaleHome, TestStoreFinishLogin_RejectedCodeKeepsPending, TestStoreFinishLogin_ResetsQuotaAndStaged, TestStoreFinishLogin_UnknownIDIsNoLogin |
 | StoreHoldBusy | 3 | TestStoreHoldBusy_ClaimForOwners, TestStoreHoldBusy_MkdirFailureDegradesToOK, TestStoreHoldBusy_NoOpForNonOwners |
 | StoreHome | 1 | TestStoreHome_ConfigDirOrRootNoCreate |
+| StoreLaunchable | 1 | TestStoreLaunchable_ADeadAccountsHomeSignedInAgainLaunchesUntilConfirmed |
 | StoreMaintain | 1 | TestStoreMaintain_AdoptsThenRefreshesAndSkipsBusy |
+| StoreMoveHome | 3 | TestStoreMoveHome_ClearingAChosenDirectoryGivesBackRotasHome, TestStoreMoveHome_ReadsTheOldHomeFirstAndTakesTheLoginOut, TestStoreMoveHome_RefusedWhileClaudeCodeRunsThere |
 | StorePrepare | 2 | TestStorePrepare_LookPathFailureReleasesClaim, TestStorePrepare_ReturnsBinaryEnvAndClaim |
-| StoreRefresh | 5 | TestStoreRefresh_CollectsErrorsNeverFatal, TestStoreRefresh_ForceIgnoresTTL, TestStoreRefresh_PanicInProviderBecomesError, TestStoreRefresh_SavesOnceWhenChanged, TestStoreRefresh_SkipsDeadUnmeteredFreshAndBusy |
+| StoreRefresh | 12 | TestStoreRefresh_AfterARunReleasedTheLockRotatesNothing, TestStoreRefresh_ClaudeBlankedLoginIsRescuedOnce, TestStoreRefresh_ClaudeBlankedLoginRefusedIsDeadAndSaysWhy, TestStoreRefresh_ClaudeBlankedLoginUnansweredStaysAlive, TestStoreRefresh_ClaudeLoginMadeInsideTheHomeIsCheckedFirst, TestStoreRefresh_ClaudeRescueKeepsToClaudeCodesRefreshLock, TestStoreRefresh_ClaudeStrandedHomeIsRefreshedWhateverRunsThere, TestStoreRefresh_CollectsErrorsNeverFatal, TestStoreRefresh_ForceIgnoresTTL, TestStoreRefresh_PanicInProviderBecomesError, TestStoreRefresh_SavesOnceWhenChanged, TestStoreRefresh_SkipsDeadUnmeteredFreshAndBusy |
+| StoreRemoteControlNow | 1 | TestStoreRemoteControlNow_SaysWhyItCannotWorkYet |
+| StoreRemovable | 1 | TestStoreRemovable_AWindowOpenInItsHomeRefuses |
 | StoreRemove | 3 | TestStoreRemove_BusyIsErrBusy, TestStoreRemove_DeletesHomeAndRetiresID, TestStoreRemove_UnknownIsNoAccount |
-| StoreRun | 16 | TestStoreRun_AKeyAccountRunsOnItsKeyAlone, TestStoreRun_APanickingLaunchLetsGoOfTheAccount, TestStoreRun_AdoptsBeforeRefresh, TestStoreRun_BusyIsErrBusy, TestStoreRun_ChildEnvIsHostEnvWithoutHiddenNames, TestStoreRun_ClaudeConversationsGoWhereTheAccountWasPointed, TestStoreRun_ClaudeHomeLosesOlderLinksToOrganisationPolicy, TestStoreRun_ClaudeKeepingItsConversationsToItselfLinksToNone, TestStoreRun_ClaudeMirrorLeavesARealFileWhereALinkBelongs, TestStoreRun_ClaudeMirrorLinksNoOrganisationPolicy, TestStoreRun_ClaudeRunsInAMirrorOfTheSharedConfigDirectory, TestStoreRun_ClaudeWithItsOwnConfigDirIsNotMirrored, TestStoreRun_DeadIsReauth, TestStoreRun_ReleasesLockSoSaveRefuses, TestStoreRun_SavesBeforeRun, TestStoreRun_StageErrorStillSaves |
+| StoreRescue | 1 | TestStoreRescue_DoesWhatAHomeIsOwedAndReadsNoUsage |
+| StoreRun | 26 | TestStoreRun_AKeyAccountRunsOnItsKeyAlone, TestStoreRun_APanickingLaunchLetsGoOfTheAccount, TestStoreRun_AdoptsBeforeRefresh, TestStoreRun_BusyIsErrBusy, TestStoreRun_ChildEnvIsHostEnvWithoutHiddenNames, TestStoreRun_ClaudeConversationsGoWhereTheAccountWasPointed, TestStoreRun_ClaudeHomeLosesOlderLinksToOrganisationPolicy, TestStoreRun_ClaudeHomeWithSomethingAliveIsReadNotWritten, TestStoreRun_ClaudeInAChosenDirectoryStaysOnAToken, TestStoreRun_ClaudeKeepingItsConversationsToItselfLinksToNone, TestStoreRun_ClaudeLaunchesOnALoginOfItsOwnInItsHome, TestStoreRun_ClaudeLoginWriteKeepsTheRestOfTheStore, TestStoreRun_ClaudeLongTokenIsForRunsWithoutAHome, TestStoreRun_ClaudeMirrorKeepsWhatBelongsToOneLoginApart, TestStoreRun_ClaudeMirrorLeavesARealFileWhereALinkBelongs, TestStoreRun_ClaudeMirrorLinksNoOrganisationPolicy, TestStoreRun_ClaudeRemoteControlKeepsAClaudeJSONOfItsOwn, TestStoreRun_ClaudeRunsInAMirrorOfTheSharedConfigDirectory, TestStoreRun_ClaudeTakesWhatClaudeCodeRotatedWithNoNetwork, TestStoreRun_ClaudeWithItsOwnConfigDirIsNotMirrored, TestStoreRun_DeadIsReauth, TestStoreRun_EveryCLIIsToldWhoseClaudeDirectoryIsYours, TestStoreRun_ReleasesLockSoSaveRefuses, TestStoreRun_SavesBeforeRun, TestStoreRun_StageErrorStillSaves, TestStoreRun_TwoAccountsToldOneHomeAreNotLaunched |
 | StoreSave | 1 | TestStoreSave_AfterReleaseRefuses |
+| StoreWatchable | 1 | TestStoreWatchable_OnlyALoginKeptInItsHome |
 
 ## rotatest/serve
 
@@ -232,8 +251,13 @@
 | Pages | 3 | TestPages_TheEmulatorIsServedByRotaItself, TestPages_TheSchemaSaysWhichPagesThereAre, TestPages_TheTerminalPageComesWithItsGroup |
 | PatchAccount | 17 | TestPatchAccount_AKeyIsNeverTakenAsADirectory, TestPatchAccount_BadOrderIs400, TestPatchAccount_CwdEqualToConfigDirIs400, TestPatchAccount_NothingToChangeIs400, TestPatchAccount_OrderBeforeIdPlacesRelative, TestPatchAccount_OrderFirstShiftsQueue, TestPatchAccount_OrderNumberAsStringIsTheSame, TestPatchAccount_OrderNumberTakesThatPlace, TestPatchAccount_OrderPastTheEndIsLast, TestPatchAccount_OrderUpMovesOnePlace, TestPatchAccount_OrderZeroLeavesTheQueue, TestPatchAccount_ProjectDirsAreStored, TestPatchAccount_RelativeProjectPathIs400, TestPatchAccount_SessionsSaysWhereConversationsLive, TestPatchAccount_ThresholdIsStored, TestPatchAccount_ThresholdOutOfRangeIs400, TestPatchAccount_UnknownIdIs404 |
 | Root | 1 | TestRoot_UnauthenticatedSaysVersion |
+| RotaList | 2 | TestRotaList_JSONCarriesLoginUntil, TestRotaList_StatusSaysWhenALoginEndsAndWhyAnAccountIsDead |
+| RotaRun | 2 | TestRotaRun_AnInteractiveRunLeavesAWatcherBehind, TestRotaRun_AnInteractiveRunWithNothingToKeepStartsNoWatcher |
+| RotaSetAndRun | 1 | TestRotaSetAndRun_RemoteControlNeedsTheHomeRotaKeeps |
 | Run | 31 | TestRun_ByIdReturnsTheResultFields, TestRun_ClaudeReadsTheResultEvent, TestRun_ClaudeRunsInAMirrorOfTheServersConfigDirectory, TestRun_CwdInsideRootRuns, TestRun_CwdOutsideRootIs400, TestRun_DangerousOptionIs403WithoutFlag, TestRun_DangerousOptionRunsWithFlag, TestRun_DeadAccountIs409, TestRun_DoneCarriesTheTotals, TestRun_FailedRunKeepsResultEmpty, TestRun_InputRunIsDescribedAndListed, TestRun_InputRunRefusesWhatItCannot, TestRun_InputRunReplaysOnReattach, TestRun_InputRunTakesMessagesByID, TestRun_MaxConcurrentSerializesRuns, TestRun_MissingPromptIs400, TestRun_NonZeroExitIs502, TestRun_PartialMessagesNeedAStream, TestRun_PartialMessagesStreamDeltasThenTheWhole, TestRun_ReplyIsTheAnswerAloneUnlessAsked, TestRun_RotationPicksTheDefault, TestRun_StreamAcceptsNDJSON, TestRun_StreamIsServerSentEvents, TestRun_StreamedTextCarriesBlocksOnlyWithWith, TestRun_TimeoutIs504, TestRun_ToolEventCarriesTheToolsInput, TestRun_UnknownAccountIs404, TestRun_UnknownFieldIs400, TestRun_UnknownReadingIs400, TestRun_UsageEventCarriesTheMessagesNumbers, TestRun_WithNamesTheReadings |
 | Schema | 1 | TestSchema_DescribesEveryProvider |
+| ServePatch | 2 | TestServePatch_RemoteControlAndOneHomeOneAccount, TestServePatch_RemoteControlOnAHomeRotaKeeps |
+| ServeWatch | 3 | TestServeWatch_NothingToKeepEndsAtTheFirstLook, TestServeWatch_OneWatcherAHomeUntilASignal, TestServeWatch_StartsItselfAgainInASessionOfItsOwn |
 | Terminal | 6 | TestTerminal_ACLIRunsOnAPseudoTerminalAndTakesTyping, TestTerminal_ANetworkAddressNeedsACertificate, TestTerminal_AShellNeedsAskingFor, TestTerminal_AWatchTokenLooksAndCannotType, TestTerminal_TheGroupIsOffUntilItIsAskedFor, TestTerminal_TheListingSaysWhoIsHoldingTheKeyboard |
 | TheListingCarriesTheDateAndNeverTheToken | 1 | TestTheListingCarriesTheDateAndNeverTheToken |
 | TheShareSocketIsTheOwnersAlone | 1 | TestTheShareSocketIsTheOwnersAlone |

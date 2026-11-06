@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -17,27 +16,6 @@ import (
 // What the program under test says and refuses since 1.3.0 and 1.3.1: when
 // a login ends, why a dead account is dead, and Remote Control, which needs
 // the home rota keeps for an account.
-
-// rotaIn runs the binary under test to completion with a private HOME and
-// the store in home, and returns everything it wrote and its exit status.
-func rotaIn(t *testing.T, home string, env []string, args ...string) (string, int) {
-	t.Helper()
-	if buildErr != nil {
-		t.Skip(buildErr)
-	}
-	cmd := exec.Command(rotaBin, args...)
-	cmd.Env = append([]string{"PATH=/usr/bin:/bin", "HOME=" + t.TempDir(), "ROTA_HOME=" + home}, env...)
-	out, err := cmd.CombinedOutput()
-	var exit *exec.ExitError
-	switch {
-	case err == nil:
-		return string(out), 0
-	case errors.As(err, &exit):
-		return string(out), exit.ExitCode()
-	}
-	t.Fatalf("rota %s: %v", strings.Join(args, " "), err)
-	return "", 0
-}
 
 // storeOf is a store directory holding accounts.json.
 func storeOf(t *testing.T, accounts string) string {

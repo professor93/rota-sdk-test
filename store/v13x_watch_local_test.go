@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -22,14 +23,20 @@ import (
 )
 
 // watching runs store.Watch over a store in dir for account 1, every few
-// milliseconds, and returns what it says and when it is done.
-func watching(t *testing.T, ctx context.Context, dir string) (said <-chan string, done <-chan struct{}) {
+// milliseconds, and returns what it says, how many looks it has begun, and
+// when it is done. A look begins by opening the store, so a look begun is
+// one more than the looks that kept it watching.
+func watching(t *testing.T, ctx context.Context, dir string) (said <-chan string, looks func() int64, done <-chan struct{}) {
 	t.Helper()
 	fake.Restore(t, &store.WatchEvery, 30*time.Millisecond)
 	lines, over := make(chan string, 1000), make(chan struct{})
+	var begun atomic.Int64
 	go func() {
 		defer close(over)
-		store.Watch(ctx, func() (*store.Store, error) { return store.Open(dir) }, 1, func(m string) { lines <- m })
+		store.Watch(ctx, func() (*store.Store, error) {
+			begun.Add(1)
+			return store.Open(dir)
+		}, 1, func(m string) { lines <- m })
 	}()
 	t.Cleanup(func() {
 		select {
@@ -38,7 +45,7 @@ func watching(t *testing.T, ctx context.Context, dir string) (said <-chan string
 			t.Error("the watcher never ended")
 		}
 	})
-	return lines, over
+	return lines, begun.Load, over
 }
 
 // until waits for a line containing want.
@@ -83,13 +90,16 @@ func TestWatch_GoesOnceNothingRunsInTheHome(t *testing.T) {
 	keptHome(t, "1.3.2")
 	dir, home := launchedStore(t)
 	closeWindow := liveWindow(t, home)
-	said, done := watching(t, ctx, dir)
+	said, looks, done := watching(t, ctx, dir)
 	until(t, said, "watching "+home)
-	time.Sleep(200 * time.Millisecond) // several looks
-	select {
-	case <-done:
-		t.Fatal("it keeps watching while a window is open")
-	default:
+	for deadline := time.After(10 * time.Second); looks() < 4; {
+		select {
+		case <-done:
+			t.Fatalf("it keeps watching while a window is open: it went after %d looks", looks())
+		case <-deadline:
+			t.Fatalf("the watcher stopped looking after %d looks", looks())
+		case <-time.After(5 * time.Millisecond):
+		}
 	}
 	closeWindow()
 	until(t, said, "nothing runs in its home any more")
@@ -101,7 +111,7 @@ func TestWatch_GoesWhenTheAccountDiesOrItIsStopped(t *testing.T) {
 	keptHome(t, "1.3.2")
 	dir, home := launchedStore(t)
 	liveWindow(t, home)
-	said, done := watching(t, ctx, dir)
+	said, _, done := watching(t, ctx, dir)
 	until(t, said, "watching")
 	s, err := store.Open(dir)
 	if err != nil {
@@ -118,7 +128,7 @@ func TestWatch_GoesWhenTheAccountDiesOrItIsStopped(t *testing.T) {
 	stop, cancel := context.WithCancel(ctx)
 	dir, home = launchedStore(t)
 	liveWindow(t, home)
-	said, done = watching(t, stop, dir)
+	said, _, done = watching(t, stop, dir)
 	until(t, said, "watching")
 	cancel()
 	until(t, said, "stopped by a signal")

@@ -18,12 +18,13 @@ import (
 	rota "github.com/professor93/rota/lib"
 	"github.com/professor93/rota/store"
 	"rotatest/internal/fake"
+	"rotatest/internal/release"
 )
 
-// What 1.3.0 and 1.3.1 promise about a claude account's home, seen through
-// the store: a login of its own written there, one owner per login, the
-// person's directory told to everything launched, one home per account, and
-// since 1.3.1 the rescue of a home whose daemon gave up or whose store
+// What 1.3.0, 1.3.1 and 1.3.2 promise about a claude account's home, seen
+// through the store: a login of its own written there, one owner per login,
+// the person's directory told to everything launched, one home per account,
+// and since 1.3.2 the rescue of a home whose daemon gave up or whose store
 // Claude Code blanked. Each case names the release it pins.
 
 // --- the world these cases run in -------------------------------------------
@@ -40,7 +41,7 @@ func keptHome(t *testing.T, version string) {
 
 // personsWorld stands in for the person's own Claude Code directory, named
 // both ways a store reads it, so nothing reads the real one whatever started
-// this test.
+// this test, and keeps the case offline.
 func personsWorld(t *testing.T) string {
 	t.Helper()
 	src := t.TempDir()
@@ -51,7 +52,17 @@ func personsWorld(t *testing.T) string {
 	}
 	t.Setenv("CLAUDE_CONFIG_DIR", src)
 	t.Setenv("ROTA_CLAUDE_HOME", src)
+	offline(t)
 	return src
+}
+
+// offline points every claude endpoint at a fake server that knows no path,
+// and gives rota its client, which dials nothing off this machine: a case
+// that expects no request reaches no real service even when rota makes one.
+// A server a case installs after it wins, and is restored first.
+func offline(t *testing.T) {
+	t.Helper()
+	fake.NewServer(t).Claude(t)
 }
 
 // echoClaude is a claude CLI that answers with the directory it was pointed
@@ -757,7 +768,7 @@ func TestStoreLaunchable_ADeadAccountsHomeSignedInAgainLaunchesUntilConfirmed(t 
 	}
 }
 
-// --- 1.3.1: a home that is owed a refresh -------------------------------------
+// --- 1.3.2: a home that is owed a refresh -------------------------------------
 
 // blankedHome is the home of the store's account as Claude Code leaves it
 // after a refresh of its own was refused: the account's current login,
@@ -774,7 +785,7 @@ func blankedHome(t *testing.T, b *memBackend, a *rota.Account) string {
 // account presents its own refresh token once, whatever runs there, the login
 // goes back in beside what Claude Code kept, and rota says so in one line.
 func TestStoreRefresh_ClaudeBlankedLoginIsRescuedOnce(t *testing.T) {
-	keptHome(t, "1.3.1")
+	keptHome(t, "1.3.2")
 	personsWorld(t)
 	srv := tokenServer(t, rotatesTo("A1", "R1"))
 	s, b, a := claudeStore(t, hoursFromNow(-1), "")
@@ -810,7 +821,7 @@ func TestStoreRefresh_ClaudeBlankedLoginIsRescuedOnce(t *testing.T) {
 // A refusal of that token is final: the account is dead, says why, and the
 // token is never presented again, by a listing, maintenance or a launch.
 func TestStoreRefresh_ClaudeBlankedLoginRefusedIsDeadAndSaysWhy(t *testing.T) {
-	keptHome(t, "1.3.1")
+	keptHome(t, "1.3.2")
 	personsWorld(t)
 	echoClaude(t)
 	srv := tokenServer(t, func(*http.Request, map[string]any) (int, any) {
@@ -843,7 +854,7 @@ func TestStoreRefresh_ClaudeBlankedLoginRefusedIsDeadAndSaysWhy(t *testing.T) {
 // Any other failure — an error the provider answered with, or no answer —
 // leaves the account alive; the look says so, and the next one tries again.
 func TestStoreRefresh_ClaudeBlankedLoginUnansweredStaysAlive(t *testing.T) {
-	keptHome(t, "1.3.1")
+	keptHome(t, "1.3.2")
 	personsWorld(t)
 	var answered atomic.Bool
 	srv := tokenServer(t, func(r *http.Request, body map[string]any) (int, any) {
@@ -887,7 +898,7 @@ func strandedHome(t *testing.T, b *memBackend, a *rota.Account, gaveUp time.Time
 // written into the store. A token not that far gone, or no report from a
 // daemon, leaves the home to Claude Code.
 func TestStoreRefresh_ClaudeStrandedHomeIsRefreshedWhateverRunsThere(t *testing.T) {
-	keptHome(t, "1.3.1")
+	keptHome(t, "1.3.2")
 	for _, c := range []struct {
 		name    string
 		expired time.Duration
@@ -929,7 +940,7 @@ func TestStoreRefresh_ClaudeStrandedHomeIsRefreshedWhateverRunsThere(t *testing.
 // them, and is neither touched nor removed; one its holder left long ago is
 // cleared, and rota's own goes when it is done.
 func TestStoreRefresh_ClaudeRescueKeepsToClaudeCodesRefreshLock(t *testing.T) {
-	keptHome(t, "1.3.1")
+	keptHome(t, "1.3.2")
 	personsWorld(t)
 	srv := tokenServer(t, rotatesTo("A1", "R1"))
 	s, b, a := claudeStore(t, hoursFromNow(-1), "")
@@ -988,7 +999,7 @@ func promised[T any](t *testing.T, version string, v any) T {
 	switch {
 	case ok:
 		return got
-	case older(rota.Version, version):
+	case release.Older(rota.Version, version):
 		t.Skipf("rota %s predates %s, which this pins", rota.Version, version)
 	default:
 		t.Fatalf("rota %s has no %T, which %s promises", rota.Version, (*T)(nil), version)
@@ -999,12 +1010,12 @@ func promised[T any](t *testing.T, version string, v any) T {
 // Store.Rescue does what a home is owed and reads no usage, for a listing
 // that reads none; the account then knows its home holds its current login.
 func TestStoreRescue_DoesWhatAHomeIsOwedAndReadsNoUsage(t *testing.T) {
-	keptHome(t, "1.3.0")
+	keptHome(t, "1.3.2")
 	personsWorld(t)
 	srv := tokenServer(t, rotatesTo("A1", "R1"))
 	srv.Handle("/usage", func(*http.Request, map[string]any) (int, any) { return 200, fake.ClaudeUsage(1, 1, "") })
 	s, b, a := claudeStore(t, hoursFromNow(-1), "")
-	rescue := promised[rescuer](t, "1.3.1", s)
+	rescue := promised[rescuer](t, "1.3.2", s)
 	home := blankedHome(t, b, a)
 	staged := promised[stagedCurrent](t, "1.3.1", a)
 	if !staged.StagedCurrent() {
@@ -1032,7 +1043,7 @@ func TestStoreRescue_DoesWhatAHomeIsOwedAndReadsNoUsage(t *testing.T) {
 // whose login lives in its home, alive, whose last launch there took the
 // stored route.
 func TestStoreWatchable_OnlyALoginKeptInItsHome(t *testing.T) {
-	keptHome(t, "1.3.0")
+	keptHome(t, "1.3.2")
 	personsWorld(t)
 	echoClaude(t)
 	exp := hoursFromNow(1).UnixMilli()

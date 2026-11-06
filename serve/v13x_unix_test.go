@@ -58,7 +58,7 @@ func watcher(t *testing.T, store string, id int) *watched {
 		t.Skip(buildErr)
 	}
 	w := &watched{cmd: exec.Command(rotaBin, "serve", "watch", strconv.Itoa(id)), ended: make(chan struct{})}
-	w.cmd.Env = []string{"PATH=/usr/bin:/bin", "HOME=" + t.TempDir(), "ROTA_HOME=" + store}
+	w.cmd.Env = append([]string{"PATH=/usr/bin:/bin", "HOME=" + t.TempDir(), "ROTA_HOME=" + store}, offline()...)
 	w.cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 	if err := w.cmd.Start(); err != nil {
 		t.Fatal(err)
@@ -150,9 +150,8 @@ func TestServeWatch_OneWatcherAHomeUntilASignal(t *testing.T) {
 
 // A watcher with nothing to keep goes at its first look and says why: an
 // account whose provider keeps no login in a home, and an account that is
-// not there. Started
-// from anywhere but a session of its own, `rota serve watch` starts itself
-// again in one and returns at once.
+// not there. Started from anywhere but a session of its own, `rota serve
+// watch` starts itself again in one and returns at once.
 func TestServeWatch_NothingToKeepEndsAtTheFirstLook(t *testing.T) {
 	since(t, "1.3.2")
 	store := storeOf(t, `{"ordered":true,"accounts":[
@@ -249,7 +248,7 @@ func TestServeWatch_StartsItselfAgainInASessionOfItsOwn(t *testing.T) {
 	store, home := keptClaude(t)
 	cmd := exec.Command(rotaBin, "serve", "watch", "1")
 	cmd.Dir = filepath.Dir(store)
-	cmd.Env = []string{"PATH=/usr/bin:/bin", "HOME=" + t.TempDir(), "ROTA_HOME=" + filepath.Base(store)}
+	cmd.Env = append([]string{"PATH=/usr/bin:/bin", "HOME=" + t.TempDir(), "ROTA_HOME=" + filepath.Base(store)}, offline()...)
 	start := time.Now()
 	if out, err := cmd.CombinedOutput(); err != nil || time.Since(start) > 10*time.Second {
 		t.Fatalf("returns at once: %v after %v\n%s", err, time.Since(start), out)
